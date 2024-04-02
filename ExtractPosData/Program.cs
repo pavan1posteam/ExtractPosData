@@ -360,6 +360,11 @@ namespace ExtractPosData/// Abhishek sir Project
                             clsTigerPos clsTigerPos = new clsTigerPos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                             Console.WriteLine();
                         }
+                        else if(current.PosName.ToUpper()== "CUSTOMSOFTWAREPOS")
+                        {
+                            clsCustomSoftwarePOS customSoftware = new clsCustomSoftwarePOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
                     }
                     catch (Exception ex)
                     {

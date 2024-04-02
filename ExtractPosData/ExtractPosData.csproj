@@ -149,6 +149,7 @@
   <ItemGroup>
     <Compile Include="BAL\BALgetProductGroups.cs" />
     <Compile Include="BAL\BALgetProducts.cs" />
+    <Compile Include="clsCustomSoftwarePOS.cs" />
     <Compile Include="clsTigerPos.cs" />
     <Compile Include="clsAdventPos_Flatfile.cs" />
     <Compile Include="clsALOHAPOS.cs" />
