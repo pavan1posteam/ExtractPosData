@@ -83,21 +83,21 @@ namespace ExtractPosData
                             try
                             {
                                 DataTable dt = ConvertCsvToDataTable(Url);
-                                List<ProductModel> prodlist = new List<ProductModel>();
+                                List<ProductsModel> prodlist = new List<ProductsModel>();
 
                                 foreach (DataRow dr in dt.Rows)
                                 {
-                                    ProductModel pmsk = new ProductModel();
+                                    ProductsModel pmsk = new ProductsModel();
 
                                     pmsk.StoreID = StoreId;
                                     if (!string.IsNullOrEmpty(dr["UPC"].ToString()))
                                     {
-                                        var upc= dr["UPC"].ToString().Replace(" -", "");
+                                        var upc = dr["UPC"].ToString().Replace(" -", "");
                                         if (upc.Length >= 10)
                                         {
                                             upc = upc.Trim('0');
                                         }
-                                        pmsk.upc = "#"+ upc;
+                                        pmsk.upc = "#" + upc;
                                         pmsk.sku = pmsk.upc;
 
                                     }
@@ -120,7 +120,8 @@ namespace ExtractPosData
                                     pmsk.Tax = tax;
                                     pmsk.sprice = 0;
                                     pmsk.Start = "";
-                                    pmsk.End = "";                                    
+                                    pmsk.End = "";
+                                    pmsk.Deposit = 0;
 
                                     if (pmsk.Price > 0 && pmsk.Qty > 0)
                                     {
@@ -129,19 +130,38 @@ namespace ExtractPosData
 
 
                                 }
-                                Console.WriteLine("Generating Custom Software POS " + StoreId + " Product CSV Files.....");
+                                Console.WriteLine("Generating CustomSoftwarePOS " + StoreId + " Product CSV Files.....");
                                 string filename = GenerateCSV.GenerateCSVFile(prodlist, "PRODUCT", StoreId, BaseUrl);
-                                Console.WriteLine("Product File Generated For Custom Software POS" + StoreId);
+                                Console.WriteLine("Product File Generated For CustomSoftwarePOS" + StoreId);
+                                string[] filePaths = Directory.GetFiles(BaseUrl + "/" + StoreId + "/Raw/");
+
+                                foreach (string filePath in filePaths)
+                                {
+                                    string destpath = filePath.Replace(@"/Raw/", @"/RawDeleted/" + DateTime.Now.ToString("yyyyMMddhhmmss"));
+                                    File.Move(filePath, destpath);
+                                }
                             }
                             catch (Exception ex)
                             {
                                 Console.WriteLine(ex.Message);
                             }
                         }
+                        else
+                        {
+                            return "Invalid FileName" + StoreId;
+                        }
+                    }
+                    else
+                    {
+                        return "Invalid Sub-Directory" + StoreId;
                     }
                 }
+                else
+                {
+                    return "Invalid Directory" + StoreId;
+                }
             }
-            return "Y";
+            return "Completed generating File For CustomSoftwarePOS" + StoreId;
 
 
         }

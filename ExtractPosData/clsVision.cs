@@ -143,6 +143,7 @@ namespace ExtractPosData
                                         continue;
                                     }
                                     full.uom = dr.Field<string>("Size description");
+                                    pmsk.uom = dr.Field<string>("Size description");
                                     full.pcat = dr.Field<string>("Group name");
                                     full.pcat1 = dr.Field<string>("Sub-departmentname");
                                     full.pcat2 = "";

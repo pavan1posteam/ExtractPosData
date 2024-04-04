@@ -365,6 +365,11 @@ namespace ExtractPosData/// Abhishek sir Project
                             clsCustomSoftwarePOS customSoftware = new clsCustomSoftwarePOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                             Console.WriteLine();
                         }
+                        else if (current.PosName.ToUpper() == "GENERALSTOREPOS")
+                        {
+                            clsGeneralStorePOS generalStorePOS = new clsGeneralStorePOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
                     }
                     catch (Exception ex)
                     {
