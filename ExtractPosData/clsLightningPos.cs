@@ -68,56 +68,121 @@ namespace ExtractPosData
             return dtResult; //Returning datatable
         }
 
-        public static DataTable ConvertExcelToDataTable(string FileName)
+        //public static DataTable ConvertExcelToDataTable(string FileName)
+        //{
+        //    try
+        //    {
+        //        DataTable dtResult = new DataTable();
+        //        FileStream stream = File.Open(FileName, FileMode.Open, FileAccess.Read);
+        //        IExcelDataReader excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream);
+        //        DataSet result = excelReader.AsDataSet();
+        //        excelReader.Close();
+        //        dtResult = result.Tables[0];
+
+        //        int count = dtResult.Columns.Count;
+        //        var cName = dtResult.Rows[0];
+
+        //        for (int i = 0; i < count; i++)
+        //        {
+        //            string columnName = cName[i]?.ToString();
+        //            if (!string.IsNullOrWhiteSpace(columnName))
+        //            {
+        //                dtResult.Columns[i].ColumnName = columnName;
+        //            }
+        //            else
+        //            {
+        //                // Provide a default name for empty column names.
+        //                dtResult.Columns[i].ColumnName = "Column" + i;
+        //            }
+        //        }
+        //        for (int i = dtResult.Columns.Count - 1; i >= 0; i--)
+        //        {
+        //            string columnName = dtResult.Columns[i].ColumnName;
+        //            bool isEmptyColumn = dtResult.AsEnumerable().All(row => string.IsNullOrWhiteSpace(row.Field<string>(columnName)));
+        //            if (isEmptyColumn)
+        //            {
+        //                dtResult.Columns.RemoveAt(i);
+        //            }
+        //        }
+
+        //        // Remove the first row (column headers) from the DataTable.
+        //        dtResult.Rows.RemoveAt(0);
+
+        //        return dtResult;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // You can log the exception or return null, an empty DataTable, or some other error indication.
+        //        Console.WriteLine(ex.Message);
+        //        return null;
+        //    }
+        //}
+        public static DataTable ConvertExcelToDataTable(string fileName)
         {
             try
             {
-                DataTable dtResult = new DataTable();
-                FileStream stream = File.Open(FileName, FileMode.Open, FileAccess.Read);
-                IExcelDataReader excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream);
-                DataSet result = excelReader.AsDataSet();
-                excelReader.Close();
-                dtResult = result.Tables[0];
+                FileStream stream = File.Open(fileName, FileMode.Open, FileAccess.Read);
+                IExcelDataReader excelReader;
 
-                int count = dtResult.Columns.Count;
-                var cName = dtResult.Rows[0];
-
-                for (int i = 0; i < count; i++)
+                if (Path.GetExtension(fileName).Equals(".xls", StringComparison.OrdinalIgnoreCase))
                 {
-                    string columnName = cName[i]?.ToString();
-                    if (!string.IsNullOrWhiteSpace(columnName))
-                    {
-                        dtResult.Columns[i].ColumnName = columnName;
-                    }
-                    else
-                    {
-                        // Provide a default name for empty column names.
-                        dtResult.Columns[i].ColumnName = "Column" + i;
-                    }
+                    excelReader = ExcelReaderFactory.CreateBinaryReader(stream); // For .xls
                 }
-                for (int i = dtResult.Columns.Count - 1; i >= 0; i--)
+                else if (Path.GetExtension(fileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
                 {
-                    string columnName = dtResult.Columns[i].ColumnName;
-                    bool isEmptyColumn = dtResult.AsEnumerable().All(row => string.IsNullOrWhiteSpace(row.Field<string>(columnName)));
-                    if (isEmptyColumn)
-                    {
-                        dtResult.Columns.RemoveAt(i);
-                    }
+                    excelReader = ExcelReaderFactory.CreateOpenXmlReader(stream); // For .xlsx
+                }
+                else
+                {
+                    throw new NotSupportedException("Unsupported file extension.");
                 }
 
-                // Remove the first row (column headers) from the DataTable.
-                dtResult.Rows.RemoveAt(0);
+                using (excelReader)
+                {
+                    var result = excelReader.AsDataSet();
+                    if (result.Tables.Count == 0)
+                        return null;
 
-                return dtResult;
+                    DataTable dtResult = result.Tables[0];
+
+                    if (dtResult.Rows.Count == 0)
+                        return null;
+
+                    // Set column names from first row
+                    var headerRow = dtResult.Rows[0];
+                    for (int i = 0; i < dtResult.Columns.Count; i++)
+                    {
+                        string columnName = headerRow[i]?.ToString()?.Trim();
+                        dtResult.Columns[i].ColumnName = string.IsNullOrWhiteSpace(columnName) ? $"Column{i}" : columnName;
+                    }
+
+                    // Remove header row
+                    dtResult.Rows.RemoveAt(0);
+
+                    // Remove completely empty columns
+                    for (int i = dtResult.Columns.Count - 1; i >= 0; i--)
+                    {
+                        bool isEmptyColumn = dtResult.AsEnumerable().All(row =>
+                        {
+                            var value = row[i];
+                            return value == null || string.IsNullOrWhiteSpace(value.ToString());
+                        });
+
+                        if (isEmptyColumn)
+                        {
+                            dtResult.Columns.RemoveAt(i);
+                        }
+                    }
+
+                    return dtResult;
+                }
             }
             catch (Exception ex)
             {
-                // You can log the exception or return null, an empty DataTable, or some other error indication.
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("Error reading Excel file: " + ex.Message);
                 return null;
             }
         }
-
         public string clsLightningPosConvertRawFile(int StoreId, decimal Tax)
         {
             DataTable dt = new DataTable();
@@ -138,7 +203,7 @@ namespace ExtractPosData
                         {
                             try
                             {
-                                if (Url.Contains(".xlsx"))
+                                if (Url.Contains(".xlsx") || Url.Contains(".xls"))
                                 {
                                     dt = ConvertExcelToDataTable(Url);
                                 }
@@ -148,7 +213,6 @@ namespace ExtractPosData
                                 }
                                 List<LightningModel> prodlist = new List<LightningModel>();
                                 List<FullNameProductModels> fulllist = new List<FullNameProductModels>();
-
                                 if (xlmsFormate.Contains(StoreId.ToString()))
                                 {
                                     foreach (DataRow dr in dt.Rows)
@@ -250,24 +314,106 @@ namespace ExtractPosData
                                     foreach (DataRow dr in dt.Rows)
                                     {
                                         LightningModel pmsk = new LightningModel();
-                                        //FullNameProductModels fmsk = new FullNameProductModels();
+                                        FullNameProductModels fmsk = new FullNameProductModels();
+                                        Verify v = new Verify(StoreId, dr);
                                         pmsk.StoreID = StoreId;
-                                        pmsk.upc = "#" + dr["SKU"].ToString();
-                                        pmsk.Qty = dr["QtyonHand"].ToString();
-                                        pmsk.sku = dr.Field<string>("SKU");
-                                        pmsk.uom = "";
-                                        //pmsk.uom = dr.Field<string>("Size");
-                                        pmsk.StoreProductName = dr.Field<string>("Description").Trim();
-                                        pmsk.StoreDescription = dr.Field<string>("Description").Trim();
-                                        pmsk.Price =Convert.ToDecimal(dr["Price"]);  ////Price_Drizly 
-                                        pmsk.sprice = 0;
-                                        pmsk.pack = 1;
-                                        pmsk.Tax = Tax;
-                                        pmsk.altupc1 = "";
-                                        pmsk.altupc2 = "";
-                                        pmsk.altupc3 = "";
-                                        pmsk.altupc4 = "";
-                                        pmsk.altupc5 = "";
+                                        
+                                        if(StoreId == 12259)
+                                        {
+                                            pmsk.upc = dr["upc"].ToString();
+                                            pmsk.Qty = dr["qty"].ToString();
+                                            pmsk.sku = dr.Field<string>("SKU");
+                                            pmsk.uom = dr["uom"].ToString();
+                                            pmsk.StoreProductName = dr.Field<string>("StoreProductName").Trim();
+                                            pmsk.StoreDescription = dr.Field<string>("Storedescription").Trim();
+                                            pmsk.Price = Convert.ToDecimal(dr["price"]);  
+                                            if(!string.IsNullOrEmpty(dr["sprice"].ToString()))
+                                            pmsk.sprice = Convert.ToDecimal(dr["sprice"]);
+                                            pmsk.pack = Convert.ToInt32(dr["pack"]);
+                                            pmsk.Tax = Tax;
+                                            pmsk.altupc1 = "";
+                                            pmsk.altupc2 = "";
+                                            pmsk.altupc3 = "";
+                                            pmsk.altupc4 = "";
+                                            pmsk.altupc5 = "";
+                                        }
+                                        else if (StoreId == 12261)
+                                        {
+                                            pmsk.upc = v.GetString("ucode1");
+                                            pmsk.Qty = v.GetString("stock");
+                                            pmsk.sku = v.GetString("ucode1");
+                                            pmsk.uom = v.GetString("sname");
+                                            pmsk.StoreProductName = v.GetString("name");
+                                            pmsk.StoreDescription = v.GetString("name");
+                                            pmsk.Price = v.GetDecimal("price1");
+                                            pmsk.pack = 1;
+                                            pmsk.Tax = Tax;
+                                            pmsk.altupc1 = v.GetString("ucode2");
+                                            pmsk.altupc2 = v.GetString("ucode3");
+                                            pmsk.altupc3 = v.GetString("ucode4");
+                                            pmsk.altupc4 = "";
+                                            pmsk.altupc5 = "";
+                                        }
+                                        else if(StoreId == 12289)
+                                        {
+                                            Verify v1 = new Verify(dr, StoreId);
+                                            if (!string.IsNullOrEmpty(v1.GetStringByIndex(0)))
+                                            {
+                                                var upc = v1.GetStringByIndex(0).ToLower();
+                                                string numberUpc = Regex.Replace(upc, "[^0-9.]", "");
+                                                pmsk.upc = "#" + numberUpc.Trim().ToLower();
+                                                pmsk.sku = "#" + v1.GetStringByIndex(0);
+                                                fmsk.upc = pmsk.upc;
+                                                fmsk.sku = pmsk.sku;
+                                            }
+                                            else
+                                            {
+                                                continue;
+                                            }
+                                            pmsk.StoreProductName = v1.GetStringByIndex(1);
+                                            pmsk.StoreDescription = v1.GetStringByIndex(1);
+                                            fmsk.pname = pmsk.StoreProductName;
+                                            fmsk.pdesc = pmsk.StoreDescription;
+                                            var uomsize = v1.GetStringByIndex(2);
+                                            pmsk.uom = Regex.Replace(uomsize, @"(?<=\s|^)\.(\d+L)\b", "$1");
+                                            fmsk.uom = pmsk.uom;
+                                            pmsk.Price = v1.GetDecimalByIndex(4);
+                                            fmsk.Price = pmsk.Price;
+                                            pmsk.Qty = v1.GetStringByIndex(5);
+                                            fmsk.pack = 1;
+                                            pmsk.sprice = 0;
+                                            pmsk.pack = 1;
+                                            pmsk.Tax = Tax;
+                                            pmsk.altupc1 = "";
+                                            pmsk.altupc2 = "";
+                                            pmsk.altupc3 = "";
+                                            pmsk.altupc4 = "";
+                                            pmsk.altupc5 = "";
+                                            fmsk.pcat = v1.GetStringByIndex(3);
+                                            fmsk.pcat1 = "";
+                                            fmsk.pcat2 = "";
+                                            fmsk.region = "";
+                                            fmsk.country = "";
+                                        }
+                                        else
+                                        {
+                                            pmsk.upc = "#" + dr["SKU"].ToString();
+                                            pmsk.Qty = dr["QtyonHand"].ToString();
+                                            pmsk.sku = dr.Field<string>("SKU");
+                                            pmsk.uom = "";
+                                            pmsk.StoreProductName = dr.Field<string>("Description").Trim();
+                                            pmsk.StoreDescription = dr.Field<string>("Description").Trim();
+                                            pmsk.Price = Convert.ToDecimal(dr["Price"]);  
+                                            pmsk.sprice = 0;
+                                            pmsk.pack = 1;
+                                            pmsk.Tax = Tax;
+                                            pmsk.altupc1 = "";
+                                            pmsk.altupc2 = "";
+                                            pmsk.altupc3 = "";
+                                            pmsk.altupc4 = "";
+                                            pmsk.altupc5 = "";
+                                        }
+                                        #region FullName File
                                         //fmsk.pname = dr.Field<string>("Description").Trim();
                                         //fmsk.pdesc = dr.Field<string>("Description").Trim();
                                         //fmsk.sku = "#" + dr["SKU"].ToString();
@@ -278,7 +424,13 @@ namespace ExtractPosData
                                         //fmsk.pcat = dr.Field<string>("Department").Trim(); ;
                                         //fmsk.pcat1 = "";
                                         //fmsk.pcat2 = "";
-                                        if (Convert.ToDecimal(pmsk.Price) > 0)
+                                        #endregion
+                                        if (StoreId == 12289 && Convert.ToDecimal(pmsk.Price) > 0)
+                                        {
+                                            prodlist.Add(pmsk);
+                                            fulllist.Add(fmsk);
+                                        }
+                                        else if (Convert.ToDecimal(pmsk.Price) > 0)
                                         {
                                             prodlist.Add(pmsk);
                                             //fulllist.Add(fmsk);
@@ -324,6 +476,7 @@ namespace ExtractPosData
             }
             return "Completed generating File For Lightning" + StoreId;
         }
+
         public class LightningModel
         {
             public int StoreID { get; set; }

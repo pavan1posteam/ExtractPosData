@@ -97,6 +97,15 @@
     <Reference Include="BouncyCastle.Crypto, Version=1.8.6.0, Culture=neutral, PublicKeyToken=0e99375e54769942">
       <HintPath>..\packages\BouncyCastle.1.8.6.1\lib\BouncyCastle.Crypto.dll</HintPath>
     </Reference>
+    <Reference Include="EPPlus, Version=7.3.2.0, Culture=neutral, PublicKeyToken=ea159fdaa78159a1, processorArchitecture=MSIL">
+      <HintPath>..\packages\EPPlus.7.3.2\lib\net35\EPPlus.dll</HintPath>
+    </Reference>
+    <Reference Include="EPPlus.Interfaces, Version=6.1.1.0, Culture=neutral, PublicKeyToken=a694d7f3b0907a61, processorArchitecture=MSIL">
+      <HintPath>..\packages\EPPlus.Interfaces.6.1.1\lib\net35\EPPlus.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="EPPlus.System.Drawing, Version=6.1.1.0, Culture=neutral, PublicKeyToken=2308d35469c9bac0, processorArchitecture=MSIL">
+      <HintPath>..\packages\EPPlus.System.Drawing.6.1.1\lib\net35\EPPlus.System.Drawing.dll</HintPath>
+    </Reference>
     <Reference Include="ExcelDataReader, Version=3.4.2.0, Culture=neutral, PublicKeyToken=93517dbe6a4012fa, processorArchitecture=MSIL">
       <HintPath>..\packages\ExcelDataReader.3.4.2\lib\net45\ExcelDataReader.dll</HintPath>
       <Private>True</Private>
@@ -109,8 +118,9 @@
       <HintPath>..\packages\iTextSharp.5.5.13.2\lib\itextsharp.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\MyWorkSpace\WorkSpace\BottlecappsWebApiGit\BottlecappsWebApiGit\WebAPI\BottlecappsWebAPI\bin\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=13.0.1.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\x86\Debug\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -149,8 +159,22 @@
   <ItemGroup>
     <Compile Include="BAL\BALgetProductGroups.cs" />
     <Compile Include="BAL\BALgetProducts.cs" />
+    <Compile Include="clsAsiFisher.cs" />
+    <Compile Include="clsbevmaxspirits.cs" />
+    <Compile Include="clsEbsPos.cs" />
+    <Compile Include="clsmpowerrawpos.cs" />
+    <Compile Include="clsncrcounterpoint.cs" />
+    <Compile Include="clsStoreTenderPos.cs" />
+    <Compile Include="clsAcutePos.cs" />
     <Compile Include="clsCustomSoftwarePOS.cs" />
+    <Compile Include="clsDiamondScanPOS.cs" />
+    <Compile Include="clsDYNAMICS.cs" />
     <Compile Include="clsGeneralStorePOS.cs" />
+    <Compile Include="clsHonorPos.cs" />
+    <Compile Include="clsMCG.cs" />
+    <Compile Include="clsPosX.cs" />
+    <Compile Include="clsSUNSMARTPOS.cs" />
+    <Compile Include="clsSUPERSONICPOS.cs" />
     <Compile Include="clsTigerPos.cs" />
     <Compile Include="clsAdventPos_Flatfile.cs" />
     <Compile Include="clsALOHAPOS.cs" />
@@ -206,12 +230,16 @@
     <Compile Include="ClsSurfLiquor_KeyStroke.cs" />
     <Compile Include="clsVision.cs" />
     <Compile Include="clsWine.cs" />
+    <Compile Include="clsWorldBank.cs" />
     <Compile Include="clsXEXATOUCH.cs" />
     <Compile Include="Common.cs" />
     <Compile Include="Ecrs_21Package.cs" />
     <Compile Include="clsEZ_POS.cs" />
+    <Compile Include="ExaTouchFile.cs" />
     <Compile Include="PCAmericamapping.cs" />
     <Compile Include="clsRetailPOSS.cs" />
+    <Compile Include="PTechMappingTool.cs" />
+    <Compile Include="RevelMapping.cs" />
     <Compile Include="Spirits2000.cs" />
     <Compile Include="SSCS.cs" />
     <Compile Include="MagStar.cs" />
@@ -240,6 +268,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="ShopKeep.cs" />
+    <Compile Include="Verify.cs" />
     <Compile Include="xexatouch.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -269,6 +298,7 @@
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

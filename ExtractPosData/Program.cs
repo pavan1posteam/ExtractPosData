@@ -8,6 +8,7 @@ namespace ExtractPosData/// Abhishek sir Project
     {
         private static void Main(string[] args)
         {
+
             string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
             string SurfLiquor_KeyStroke = ConfigurationManager.AppSettings["SurfLiquor_KeyStroke"];
             string SpiritsFinewine_Keystroke = ConfigurationManager.AppSettings["SpiritsFinewine_Keystroke"];
@@ -29,6 +30,14 @@ namespace ExtractPosData/// Abhishek sir Project
                 {
                     try
                     {
+                       /* if (current.StoreSettings.StoreId == 12431)
+                        {
+                            Console.WriteLine("Fetching storeid "+  current.StoreSettings.StoreId );
+                        }
+                        else
+                        {
+                            continue;
+                        }*/
                         if (current.PosName.ToUpper() == "KEYSTROKE")
                         {
                             if (SurfLiquor_KeyStroke.Contains(current.StoreSettings.StoreId.ToString()))
@@ -54,7 +63,7 @@ namespace ExtractPosData/// Abhishek sir Project
                                 clsSigmansEcrs clsSigmansEcrs = new clsSigmansEcrs(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                                 Console.WriteLine();
                             }
-                            if (Ecrs_21Packages.Contains(current.StoreSettings.StoreId.ToString()))
+                            else if (Ecrs_21Packages.Contains(current.StoreSettings.StoreId.ToString()))
                             {
                                 Ecrs_21Package clsECRS = new Ecrs_21Package(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                                 Console.WriteLine();
@@ -64,7 +73,7 @@ namespace ExtractPosData/// Abhishek sir Project
                                 clsECRS clsECRS = new clsECRS(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.liquortax, current.StoreSettings.POSSettings.liquortaxrateperlitre);
                                 Console.WriteLine();
                             }
-                            if (ECRSMacadoodles.Contains(current.StoreSettings.StoreId.ToString()))
+                            else if (ECRSMacadoodles.Contains(current.StoreSettings.StoreId.ToString()))
                             {
                                 clsECRSMacadoodles clsECRSMacadoodles = new clsECRSMacadoodles(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                                 Console.WriteLine();
@@ -97,7 +106,7 @@ namespace ExtractPosData/// Abhishek sir Project
                         }
                         else if (current.PosName.ToUpper() == "VISION")
                         {
-                            clsVision clsVision = new clsVision(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.IsMarkUpPrice, current.StoreSettings.POSSettings.MarkUpValue, current.StoreSettings.POSSettings.LiquorDiscount, current.StoreSettings.POSSettings.WineDiscount);
+                            clsVision clsVision = new clsVision(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.IsMarkUpPrice, current.StoreSettings.POSSettings.MarkUpValue, current.StoreSettings.POSSettings.LiquorDiscount, current.StoreSettings.POSSettings.WineDiscount, current.StoreSettings.POSSettings.LiquorMarkup);
                             Console.WriteLine();
                         }
                         else if (current.PosName.ToUpper() == "LIQUORREGISTERMARKET")
@@ -132,12 +141,8 @@ namespace ExtractPosData/// Abhishek sir Project
                         }
                         else if (current.PosName.ToUpper() == "MODISOFT")
                         {
-                            //if (current.StoreSettings.StoreId == 11792)
-                            {
-                                clsModisoft clsModisoft = new clsModisoft(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.LiquorDiscount, current.StoreSettings.POSSettings.WineDiscount);
-                                Console.WriteLine();
-                            }
-
+                            clsModisoft clsModisoft = new clsModisoft(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.LiquorDiscount, current.StoreSettings.POSSettings.WineDiscount);
+                            Console.WriteLine();
                         }
                         else if (current.PosName.ToUpper() == "EHOPPER")
                         {
@@ -199,7 +204,7 @@ namespace ExtractPosData/// Abhishek sir Project
                         }
                         else if (current.PosName.ToUpper() == "BOTTLEPOS")
                         {
-                            clsBottlePos clsBottlePos = new clsBottlePos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            clsBottlePos clsBottlePos = new clsBottlePos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.beertax, current.StoreSettings.POSSettings.winetax);
                             Console.WriteLine();
                         }
                         else if (current.PosName.ToUpper() == "NRSPOS")
@@ -265,6 +270,7 @@ namespace ExtractPosData/// Abhishek sir Project
                             else if (ECRSCATAPULT_XML.Contains(current.StoreSettings.StoreId.ToString()))
                             {
                                 clsCatapultXML catapultXML = new clsCatapultXML(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.winetax, current.StoreSettings.POSSettings.liquortax, current.StoreSettings.POSSettings.beertax);
+                                Console.WriteLine();
                             }
                             else
                             {
@@ -360,7 +366,7 @@ namespace ExtractPosData/// Abhishek sir Project
                             clsTigerPos clsTigerPos = new clsTigerPos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                             Console.WriteLine();
                         }
-                        else if(current.PosName.ToUpper()== "CUSTOMSOFTWAREPOS")
+                        else if (current.PosName.ToUpper() == "CUSTOMSOFTWAREPOS")
                         {
                             clsCustomSoftwarePOS customSoftware = new clsCustomSoftwarePOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                             Console.WriteLine();
@@ -370,6 +376,95 @@ namespace ExtractPosData/// Abhishek sir Project
                             clsGeneralStorePOS generalStorePOS = new clsGeneralStorePOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
                             Console.WriteLine();
                         }
+                        else if (current.PosName.ToUpper() == "PTECHMAPPING")
+                        {
+                            PTechMappingTool PTechMappingTool = new PTechMappingTool(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "EXATOUCHFILE")
+                        {
+                            ExaTouchFile ExaTouchFile = new ExaTouchFile(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "DIAMONDSCANPOS")
+                        {
+                            clsDiamondScanPOS diamondScanPOS = new clsDiamondScanPOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "POSX")
+                        {
+                            clsPosX PosX = new clsPosX(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "HONORPOS")
+                        {
+                            clsHonorPos clsHonorPos = new clsHonorPos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "WORLDBANK")
+                        {
+                            clsWorldBank WorldBank = new clsWorldBank(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "MCG")
+                        {
+                            clsMCG MCG = new clsMCG(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "DYNAMICS")
+                        {
+                            clsDYNAMICS DYNAMICS = new clsDYNAMICS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "SUNSMARTPOS")
+                        {
+                            clsSUNSMARTPOS sunsmartpos = new clsSUNSMARTPOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "SUPERSONICPOS")
+                        {
+                            clsSUPERSONICPOS supersonicpos = new clsSUPERSONICPOS(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "REVELMAPPING")
+                        {
+                            RevelMapping Revel = new RevelMapping(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "ACUTEPOS")
+                        {
+                            clsAcutePos Revel = new clsAcutePos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "STORETENDER POS")
+                        {
+                            clsStoreTenderPos clsstoretender = new clsStoreTenderPos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "MPOWERRAW")
+                        {
+                            clsmpowerrawpos clsmpowerraw = new clsmpowerrawpos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.POSSettings.Deposit);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "BEVMAXSPIRITS")
+                        {
+                            clsbevmaxspirits clsbevmaxasi = new clsbevmaxspirits(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.discountable);
+                            Console.WriteLine();
+                        }
+                        else if (current.PosName.ToUpper() == "NCRCOUNTERPOINT")
+                        {
+                            if (!string.IsNullOrEmpty(current.StoreSettings.POSSettings.tax.ToString()))
+                            {
+                                clsncrcounterpoint clsncr = new clsncrcounterpoint(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                                Console.WriteLine();
+                            }
+                        }
+                        //else if (current.PosName.ToUpper() == "EBS")
+                        //{
+                        //    clsEbsPos clsebs = new clsEbsPos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+                        //    Console.WriteLine();
+                        //}
+
                     }
                     catch (Exception ex)
                     {

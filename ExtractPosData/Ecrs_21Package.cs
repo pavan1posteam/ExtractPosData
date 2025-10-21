@@ -15,6 +15,8 @@ namespace ExtractPosData
     class Ecrs_21Package
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
+        string StaticQty = ConfigurationManager.AppSettings["StaticQty"];
+        string Quantity = ConfigurationManager.AppSettings["Quantity"];
         public Ecrs_21Package(int storeId, decimal Tax)
         {
             try
@@ -122,17 +124,22 @@ namespace ExtractPosData
                                         {
                                             continue;
                                         }
-                                        var y = dr["qty"].ToString();
-                                  
-                                        if (y != "")
-                                        {
-                                            var Qtyy = Convert.ToDecimal(y);
-
-                                            pmsk.Qty = Convert.ToInt32(Qtyy);
-                                        }
+                                        if (StaticQty.Contains(StoreId.ToString()))
+                                            pmsk.Qty = 999;
                                         else
                                         {
-                                            pmsk.Qty = Convert.ToInt32(null);
+                                            var y = dr["qty"].ToString();
+
+                                            if (y != "")
+                                            {
+                                                var Qtyy = Convert.ToDecimal(y);
+
+                                                pmsk.Qty = Convert.ToInt32(Qtyy);
+                                            }
+                                            else
+                                            {
+                                                pmsk.Qty = Convert.ToInt32(null);
+                                            }
                                         }
 
                                         if (!string.IsNullOrEmpty(dr.Field<string>("name")))
@@ -185,7 +192,12 @@ namespace ExtractPosData
                                         pmsk.altupc3 = "";
                                         pmsk.altupc4 = "";
                                         pmsk.altupc5 = "";
-                                        if (pmsk.Price > 0 && pmsk.Qty>0 && full.pcat != "Tobacco")
+                                        if (Quantity.Contains(StoreId.ToString()) && pmsk.Price > 0 && pmsk.Qty>0 && full.pcat != "Tobacco")
+                                        {
+                                            fulllist.Add(full);
+                                            prodlist.Add(pmsk);
+                                        }
+                                        else if (pmsk.Price > 0 && full.pcat != "Tobacco")
                                         {
                                             fulllist.Add(full);
                                             prodlist.Add(pmsk);

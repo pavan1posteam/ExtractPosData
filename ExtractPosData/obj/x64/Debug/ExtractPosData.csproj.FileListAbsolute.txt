@@ -1,0 +1,2 @@
+C:\Workspace\MobileUpdater\ExtractPosData\ExtractPosData\bin\x64\Debug\ExtractPosData.exe.config
+C:\Workspace\MobileUpdater\ExtractPosData\ExtractPosData\obj\x64\Debug\ExtractPosData.csproj.App.config

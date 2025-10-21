@@ -73,6 +73,7 @@ namespace ExtractPosData.Models
         public string PosName { get; set; }
         public StoreSetting StoreSettings { get; set; }
         public string Setting { get; set; }
+        public int ProductCount { get; set; }
     }
     public class Setting {
         public string ClientId { get; set; }
@@ -93,7 +94,7 @@ namespace ExtractPosData.Models
         public string category { get; set; }
         public string BaseUrl { get; set; }
         public decimal tax { get; set; }
-
+        public int discountable { get; set; }
         public decimal mixtax { get; set; }
         public string PosFileName { get; set; }
         public string PosFileName2 { get; set; }
@@ -114,7 +115,10 @@ namespace ExtractPosData.Models
         public decimal winetax { get; set; }
         public int LiquorDiscount { get; set; } // Added for Vision Mappingtool & Modisoft Mappingtool  for ticket  14418 , 14696 
         public int WineDiscount { get; set; }  // Added for Vision Mappingtool   & Modisoft Mappingtool for ticket  14418 , 14696 
+        public decimal LiquorMarkup { get; set; } // Added for Vision Mappingtool for ticket  #40844
         public int client_id { get; set; }
+        public decimal Deposit { get; set; }
+
     }
     public class categories
     {
@@ -130,6 +134,7 @@ namespace ExtractPosData.Models
     public class StoreSetting {
         public int StoreId { get; set; }
         public Setting POSSettings { get; set; }
+        public int ProductCount { get; set; }
     }
     public class storecat
     {

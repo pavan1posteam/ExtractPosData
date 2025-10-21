@@ -17,6 +17,8 @@ namespace ExtractPosData
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
         string PfOnly = ConfigurationManager.AppSettings["ProductFileOnly"];
+        string RawFiletax = ConfigurationManager.AppSettings["RawFiletax"];
+
         public clsLiquorLand(int storeId, decimal Tax)
          {
             try
@@ -89,11 +91,10 @@ namespace ExtractPosData
                         try
                         {
                             DataTable dt = ConvertCsvToDataTable(Url);
-
                             var dtr = from s in dt.AsEnumerable() select s;
+                            
                             List<ProductMode> prodlist = new List<ProductMode>();
                             List<FullNameProductModel> fullnamelist = new List<FullNameProductModel>();
-
                             foreach (DataRow dr in dt.Rows)
                             {
                                 try
@@ -170,10 +171,10 @@ namespace ExtractPosData
                                         }
                                     }
 
-                                    else if(PfOnly.Contains(StoreId.ToString()))
+                                    else if (PfOnly.Contains(StoreId.ToString()))
                                     {
                                         pmsk.pack = Convert.ToInt32(dr["Pack Size"]);
-                                        full.pack = Convert.ToInt32(dr["Pack Size"]); 
+                                        full.pack = Convert.ToInt32(dr["Pack Size"]);
                                     }
 
                                     else
@@ -181,12 +182,18 @@ namespace ExtractPosData
                                         pmsk.pack = Convert.ToInt32(dr["Pack"]);
                                         full.pack = Convert.ToInt32(dr["Pack"]);
                                     }
-                                        pmsk.StoreProductName = dr["StoreProductName"].ToString().Trim();
-                                        pmsk.StoreDescription = dr["StoreProductName"].ToString().Trim();
-                                        full.pname = dr["StoreProductName"].ToString().Trim();
-                                        full.pdesc = dr["StoreProductName"].ToString().Trim();
-                                        pmsk.Price = System.Convert.ToDecimal(dr["Price".ToLower()] == DBNull.Value ? 0 : dr["Price".ToLower()]);
-                                        full.Price = System.Convert.ToDecimal(dr["Price".ToLower()] == DBNull.Value ? 0 : dr["Price".ToLower()]);
+                                    pmsk.StoreProductName = dr["StoreProductName"].ToString().Trim();
+                                    pmsk.StoreDescription = dr["StoreProductName"].ToString().Trim();
+                                    full.pname = dr["StoreProductName"].ToString().Trim();
+                                    full.pdesc = dr["StoreProductName"].ToString().Trim();
+
+                                    if (StoreId == 11951)
+                                    {
+                                        pmsk.StoreProductName += " | " + pmsk.uom;
+                                        full.pname = pmsk.StoreProductName;
+                                    }
+                                    pmsk.Price = System.Convert.ToDecimal(dr["Price".ToLower()] == DBNull.Value ? 0 : dr["Price".ToLower()]);
+                                    full.Price = System.Convert.ToDecimal(dr["Price".ToLower()] == DBNull.Value ? 0 : dr["Price".ToLower()]);
 
                                     if (PfOnly.Contains(StoreId.ToString()))
                                     {
@@ -194,22 +201,22 @@ namespace ExtractPosData
                                     }
                                     else
                                     {
-                                        if (!String.IsNullOrEmpty(dr.Field<string>("sprice"))  )
-                                          {
-                                             pmsk.sprice = System.Convert.ToDecimal(dr["sprice"] == DBNull.Value ? 0 : dr["sprice"]);
-                                          }                                  
-                                        
+                                        if (!String.IsNullOrEmpty(dr.Field<string>("sprice")))
+                                        {
+                                            pmsk.sprice = System.Convert.ToDecimal(dr["sprice"] == DBNull.Value ? 0 : dr["sprice"]);
+                                        }
+
                                     }
                                     pmsk.Start = "";
                                     pmsk.End = "";
-                                    if (StoreId == 11737)
+                                    if (RawFiletax.Contains(StoreId.ToString()))
                                     {
                                         decimal ta = Convert.ToDecimal(dr["Tax"]);
                                         if (ta > 0)
                                         {
                                             pmsk.tax = ta / 100;
                                         }
-                                        
+
                                     }
                                     else
                                     {
@@ -221,13 +228,13 @@ namespace ExtractPosData
                                     pmsk.altupc4 = "";
                                     pmsk.altupc5 = "";
 
-                                    if (PfOnly.Contains(StoreId.ToString()) &&  pmsk.Qty > 0 && pmsk.Price > 0) // 11338 
+                                    if (PfOnly.Contains(StoreId.ToString()) && pmsk.Qty > 0 && pmsk.Price > 0) // 11338 
                                     {
                                         prodlist.Add(pmsk);
                                     }
                                     else
                                     {
-                                        if(pmsk.Qty > 0 && pmsk.Price > 0)
+                                        if (pmsk.Qty > 0 && pmsk.Price > 0)
                                         {
                                             prodlist.Add(pmsk);
                                             fullnamelist.Add(full);
@@ -235,8 +242,8 @@ namespace ExtractPosData
                                     }
                                 }
                                 catch (Exception E)
-                                { 
-                                
+                                {
+                                    Console.WriteLine(E.Message);
                                 }
                             }
                             Console.WriteLine("Generating JMSC " + StoreId + " Product CSV Files.....");

@@ -16,6 +16,7 @@ namespace ExtractPosData
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
         string BaseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
+        string SpriceKeyStroke = ConfigurationManager.AppSettings.Get("SpriceKeyStroke");
 
         public clsSpiritsFinewine_Keystroke(int StoreId, decimal tax)
         {
@@ -352,7 +353,7 @@ namespace ExtractPosData
                                         pmsk.StoreDescription = dr.Field<string>("name").Trim().Replace("=", "");
                                         fname.pdesc = dr.Field<string>("name").Replace("=", "");
                                         var X = dr["baseprice"].ToString();
-
+                                        var Y= dr["sprice"].ToString();
                                         if (X != "")
                                         {
                                             var PRC = Convert.ToDecimal(X);
@@ -365,7 +366,27 @@ namespace ExtractPosData
                                             pmsk.Price = Convert.ToDecimal(null);
                                             fname.Price = Convert.ToDecimal(null);
                                         }
-                                        pmsk.sprice = 0;
+
+                                        if (SpriceKeyStroke.Contains(StoreId.ToString()))
+                                        {
+                                            if (Y != "" && Convert.ToInt32(dr["pi1_description5"]) == 1)
+                                            {
+                                                var sprc = Convert.ToDecimal(Y);
+
+                                                pmsk.sprice = Convert.ToDecimal(sprc);
+                                            }
+                                            else
+                                            {
+                                                pmsk.sprice = 0;
+                                            }
+                                        }
+                                        else
+                                        {
+
+                                            pmsk.sprice = 0;
+                                        }
+
+
                                         pmsk.pack = Convert.ToInt32(1);
                                         fname.pack = Convert.ToInt32(1);
                                         if (pmsk.sprice > 0)
@@ -383,15 +404,15 @@ namespace ExtractPosData
 
                                         if (StoreId == 11341)   // As per ticket 12492
                                         {
-                                            string cat1 = dr.Field<string>("uom");
-                                            if (cat1 == "MIXES")
-                                            {
-                                                pmsk.Tax = Convert.ToDecimal(0.07375);
-                                            }
-                                            else
-                                            {
+                                            //string cat1 = dr.Field<string>("uom");
+                                            //if (cat1 == "MIXES")
+                                            //{
+                                            //    pmsk.Tax = Convert.ToDecimal(0.07375);
+                                            //}
+                                            //else
+                                            //{
                                                 pmsk.Tax = tax;
-                                            }
+                                            //}
                                         }
                                         else if (StoreId == 11736) //ticket #22146
                                         {

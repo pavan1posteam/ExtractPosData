@@ -19,6 +19,8 @@ namespace ExtractPosData
         string stocks = ConfigurationManager.AppSettings["stocks"];
         string Depst = ConfigurationManager.AppSettings["Deposit"];
         string differentQty = ConfigurationManager.AppSettings["differentQty"];
+        string DiffDeposit = ConfigurationManager.AppSettings["DiffDeposit"];
+        string DifferentformateNRS = ConfigurationManager.AppSettings["DifferentformateNRS"];
         public clsNRSPos(int StoreId, decimal tax, List<categories> cat, bool IsMarkUpPrice, int MarkUpValue)
         {
             try
@@ -98,159 +100,249 @@ namespace ExtractPosData
                                     FullnameModel fname = new FullnameModel();
 
                                     pmsk.StoreID = StoreId;
-
-                                    string upc = Regex.Replace(dr["upc"].ToString(), @"[^0-9]+", "");
-                                    if (!string.IsNullOrEmpty(upc) && upc != "")
+                                    if (DifferentformateNRS.Contains(StoreId.ToString()))
                                     {
-                                        pmsk.upc = "#" + upc.ToString();
-                                        fname.upc = "#" + upc.ToString();
-                                        pmsk.sku = "#" + upc.ToString();
-                                        fname.sku = "#" + upc.ToString();
-                                    }
-                                    else
-                                    {
-                                        continue;
-                                    }
-                                    if (Qty.Contains(StoreId.ToString()))   //  Qunatity  column as qty 
-                                    {
-                                        string qty = Regex.Replace(dr["qty"].ToString(), "=", "");
-
+                                        string upc = Regex.Replace(dr["Variant Barcode"].ToString(), @"[^0-9]+", "");
+                                        if (!string.IsNullOrEmpty(upc) && upc != "")
+                                        {
+                                            pmsk.upc = "#" + upc.ToString();
+                                            fname.upc = "#" + upc.ToString();
+                                            pmsk.sku = "#" + upc.ToString();
+                                            fname.sku = "#" + upc.ToString();
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                        string qty = Regex.Replace(dr["Variant Inventory Qty"].ToString(), "=", "");
                                         if (!string.IsNullOrEmpty(qty))
                                         {
                                             var qtyy = Convert.ToInt32(int.Parse(qty));
                                             pmsk.Qty = System.Convert.ToInt32(qtyy);
                                         }
-                                    }
-
-                                    if (SQty.Contains(StoreId.ToString()))  // StoreID:10947;11466;11473
-                                    {
-                                        pmsk.Qty = 999;  // As per ticket 13931 
-                                    }
-                                    else if (!stocks.Contains(StoreId.ToString()))
-                                    {
-                                        string qty = Regex.Replace(dr["Stock"].ToString(), "=", "");
-                                        if (!string.IsNullOrEmpty(qty))
+                                        pmsk.StoreProductName = dr.Field<string>("Title").Trim().Replace("=", "").Replace("'", "");
+                                        fname.pname = dr.Field<string>("Title").Trim().Replace("=", "").Replace("'", "");
+                                        pmsk.StoreDescription = dr.Field<string>("Title").Trim().Replace("=", "").Replace("'", "");
+                                        fname.pdesc = dr.Field<string>("Title").Trim().Replace("=", "").Replace("'", "");
+                                        Decimal Price = System.Convert.ToDecimal(dr["Variant Price"]);
+                                        pmsk.Price = Price;
+                                        fname.Price = Price;
+                                        pmsk.pack = 1;
+                                        fname.pack = 1;
+                                        string ccProdname = pmsk.StoreProductName.ToUpper();
+                                        Regex filter = new Regex(@"(\d+(?:\.\d+)?\s*(?:LB|ML|L|OZ|PK|sOZ|oz+))");
+                                        var match = filter.Match(ccProdname);
+                                        if (match.Success)
                                         {
-                                            var qtyy = Convert.ToInt32(int.Parse(qty));
-                                            pmsk.Qty = System.Convert.ToInt32(qtyy);
+                                            pmsk.uom = match.Value;
                                         }
-                                    }
-                                    pmsk.StoreProductName = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
-                                    fname.pname = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
-                                    pmsk.StoreDescription = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
-                                    fname.pdesc = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
-                                    var result = Regex.Split(dr.Field<string>("Name"), "\r\n");
-                                    var result1 = "";
-                                    for (int i = 0; i < result.Count(); i++)
-                                    {
-                                        result1 = result1 + result[i];
-                                    }
-                                    pmsk.StoreProductName = result1;
-                                    fname.pname = result1;
-                                    pmsk.StoreDescription = result1;
-                                    fname.pdesc = result1;
-                                    Decimal Price = System.Convert.ToDecimal(dr["cents"]);
-                                    if (IsMarkUpPrice)
-                                    {
-                                        pmsk.Price = Price / 100;
-                                        fname.Price = Price / 100;
-                                        pmsk.Price = Math.Round(pmsk.Price * MarkUpValue / 100 + pmsk.Price, 2);
-                                        fname.Price = Math.Round(fname.Price * MarkUpValue / 100 + fname.Price, 2);
-                                    }
-                                    else
-                                    {
-                                        pmsk.Price = Price / 100;
-                                        fname.Price = Price / 100;
-                                    }
-                                    pmsk.sprice = System.Convert.ToDecimal(null);
-
-                                    if (pmsk.sprice > 0)
-                                    {
-                                        pmsk.Start = DateTime.Now.ToString("MM/dd/yyyy");
-                                        pmsk.End = DateTime.Now.AddDays(1).ToString("MM/dd/yyyy");
-                                    }
-                                    else
-                                    {
+                                        else
+                                        {
+                                            pmsk.uom = "";
+                                        }
+                                        if(StoreId == 11421)
+                                        {
+                                            if (pmsk.uom.Contains("4X16"))
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                        pmsk.sprice = 0;
                                         pmsk.Start = "";
                                         pmsk.End = "";
-                                    }
+                                        pmsk.altupc1 = "";
+                                        pmsk.altupc2 = "";
+                                        pmsk.altupc3 = "";
+                                        pmsk.altupc4 = "";
+                                        pmsk.altupc5 = "";
+                                        String Dept = dr.Field<string>("Type");
+                                        fname.pcat = Dept;
+                                        fname.pcat1 = "";
+                                        fname.pcat2 = "";
 
-                                    pmsk.pack = 1;
-                                    fname.pack = 1;
-                                    pmsk.Tax = tax;
-
-                                    pmsk.uom = dr.Field<string>("size").Replace("=", "");
-                                    fname.uom = dr.Field<string>("size").Replace("=", "");
-                                    String Dept = dr.Field<string>("Department");
-                                    if (StoreId == 10986)
-                                    {
-                                        Dept = Regex.Replace(Dept.ToString(), @"[^A-Z]+", "");
-                                    }
-                                    fname.pcat = Dept.ToString();
-                                    fname.pcat1 = "";
-                                    fname.pcat2 = "";
-                                    fname.region = "";
-                                    fname.country = "";
-                                    if (differentQty.Contains(StoreId.ToString()))
-                                    {
-                                        string qty = Regex.Replace(dr["setstock"].ToString(), "=", "");
-                                        if (fname.pcat.Contains("Drinks") || fname.pcat.Contains("JUICE") || fname.pcat.Contains("Mixes"))
-                                        {
-                                            pmsk.Qty = 999;
-                                        }
-                                        else if (!string.IsNullOrEmpty(qty))
-                                        {
-                                            var qtyy = Convert.ToInt32(int.Parse(qty));
-                                            pmsk.Qty = System.Convert.ToInt32(qtyy);
-                                        }
-                                        else { continue; }
-
-                                    }
-                                    if (pmsk.Qty < 0)  //// If Any Qty < 0 we make those products as 0 
-                                    {
-                                        pmsk.Qty = 0;
-                                    }
-                                    if (Depst.Contains(StoreId.ToString()))
-                                    {
-                                        if (fname.pcat == "Soft Drinks - $0.05" || fname.pcat == "Beer $0.05 CRV")
-                                        {
-                                            pmsk.Deposit = 0.05;
-                                        }
-                                        else if (fname.pcat == "Soft Drinks - $0.10" || fname.pcat == "Beer $0.10 CRV")
-                                        {
-                                            pmsk.Deposit = 0.10;
-                                        }
-                                    }
-                                    if (StoreId == 11263)  //|| StoreId==11291 older one Raw file 
-                                    {
-                                        if (pmsk.Price > 0 && pmsk.Qty > 0 && (fname.pcat.ToUpper() == "ALCOHOL" || fname.pcat.ToUpper() == "DRINKS"))
+                                        if(pmsk.Price >0)
                                         {
                                             prodlist.Add(pmsk);
                                             full.Add(fname);
                                         }
-                                    }
-                                    else if (StoreId == 10947)
-                                    {
-                                        if (pmsk.Price > 0 && (fname.pcat.ToUpper() != "GENERIC CIGARETTES" && fname.pcat.ToUpper() != "HOUSEHOLD"
-                                            && fname.pcat.ToUpper() != "PREMIUM CARTONS" && fname.pcat.ToUpper() != "PREMIUM CIGARETTES"
-                                            && fname.pcat.ToUpper() != "SCRATCH OFFS" && fname.pcat.ToUpper() != "SMOKE"
-                                            && fname.pcat.ToUpper() != "SUB-GENERIC CARTON" && fname.pcat.ToUpper() != "SUB-GENERIC CIGARETTES"
-                                            && fname.pcat.ToUpper() != "TOBACCO" && fname.pcat.ToUpper() != "KRATOM"
-                                            && fname.pcat.ToUpper() != "GENERIC CARTONS"))
-                                        {
-                                            prodlist.Add(pmsk);
-                                            full.Add(fname);
-                                        }
+
                                     }
                                     else
                                     {
-                                        if (pmsk.Price > 0 && pmsk.Qty > 0 && (fname.pcat != "Cigarettes" && fname.pcat != "Cigars" && fname.pcat != "Vapes"))
+
+
+                                        string upc = Regex.Replace(dr["upc"].ToString(), @"[^0-9]+", "");
+                                        if (!string.IsNullOrEmpty(upc) && upc != "")
                                         {
-                                            prodlist.Add(pmsk);
-                                            full.Add(fname);
+                                            pmsk.upc = "#" + upc.ToString();
+                                            fname.upc = "#" + upc.ToString();
+                                            pmsk.sku = "#" + upc.ToString();
+                                            fname.sku = "#" + upc.ToString();
+                                        }
+                                        else
+                                        {
+                                            continue;
+                                        }
+                                        if (Qty.Contains(StoreId.ToString()))   //  Qunatity  column as qty 
+                                        {
+                                            string qty = Regex.Replace(dr["qty"].ToString(), "=", "");
+
+                                            if (!string.IsNullOrEmpty(qty))
+                                            {
+                                                var qtyy = Convert.ToInt32(int.Parse(qty));
+                                                pmsk.Qty = System.Convert.ToInt32(qtyy);
+                                            }
+                                        }
+
+                                        if (SQty.Contains(StoreId.ToString()))  // StoreID:10947;11466;11473
+                                        {
+                                            pmsk.Qty = 999;  // As per ticket 13931 
+                                        }
+                                        else if (!stocks.Contains(StoreId.ToString()))
+                                        {
+                                            string qty = Regex.Replace(dr["setstock"].ToString(), "=", "");
+                                            if (!string.IsNullOrEmpty(qty))
+                                            {
+                                                var qtyy = Convert.ToInt32(int.Parse(qty));
+                                                pmsk.Qty = System.Convert.ToInt32(qtyy);
+                                            }
+                                        }
+                                        pmsk.StoreProductName = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
+                                        fname.pname = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
+                                        pmsk.StoreDescription = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
+                                        fname.pdesc = dr.Field<string>("Name").Trim().Replace("=", "").Replace("DiseÃ±o", "").Replace("'", "");
+                                        var result = Regex.Split(dr.Field<string>("Name"), "\r\n");
+                                        var result1 = "";
+                                        for (int i = 0; i < result.Count(); i++)
+                                        {
+                                            result1 = result1 + result[i];
+                                        }
+                                        pmsk.StoreProductName = result1.Replace("\n", "");
+                                        fname.pname = result1.Replace("\n", "");
+                                        pmsk.StoreDescription = result1.Replace("\n", ""); ;
+                                        fname.pdesc = result1.Replace("\n", ""); ;
+                                        Decimal Price = System.Convert.ToDecimal(dr["cents"]);
+                                        if (IsMarkUpPrice)
+                                        {
+                                            pmsk.Price = Price / 100;
+                                            fname.Price = Price / 100;
+                                            pmsk.Price = Math.Round(pmsk.Price * MarkUpValue / 100 + pmsk.Price, 2);
+                                            fname.Price = Math.Round(fname.Price * MarkUpValue / 100 + fname.Price, 2);
+                                        }
+                                        else
+                                        {
+                                            pmsk.Price = Price / 100;
+                                            fname.Price = Price / 100;
+                                        }
+                                        pmsk.sprice = System.Convert.ToDecimal(null);
+
+                                        if (pmsk.sprice > 0)
+                                        {
+                                            pmsk.Start = DateTime.Now.ToString("MM/dd/yyyy");
+                                            pmsk.End = DateTime.Now.AddDays(1).ToString("MM/dd/yyyy");
+                                        }
+                                        else
+                                        {
+                                            pmsk.Start = "";
+                                            pmsk.End = "";
+                                        }
+
+                                        pmsk.pack = 1;
+                                        fname.pack = 1;
+                                        pmsk.Tax = tax;
+
+                                        pmsk.uom = dr.Field<string>("size").Replace("=", "");
+                                        fname.uom = dr.Field<string>("size").Replace("=", "");
+                                        if (StoreId == 11421)
+                                        {
+                                            if (pmsk.uom.Contains("4X16"))
+                                            {
+                                                continue;
+                                            }
+                                        }
+
+                                        String Dept = dr.Field<string>("Department");
+                                        if (StoreId == 10986)
+                                        {
+                                            Dept = Regex.Replace(Dept.ToString(), @"[^A-Z]+", "");
+                                        }
+                                        fname.pcat = Dept.ToString();
+                                        fname.pcat1 = "";
+                                        fname.pcat2 = "";
+                                        fname.region = "";
+                                        fname.country = "";
+                                        if (differentQty.Contains(StoreId.ToString()))
+                                        {
+                                            string qty = Regex.Replace(dr["setstock"].ToString(), "=", "");
+                                            if (fname.pcat.Contains("Drinks") || fname.pcat.Contains("JUICE") || fname.pcat.Contains("Mixes"))
+                                            {
+                                                pmsk.Qty = 999;
+                                            }
+                                            else if (!string.IsNullOrEmpty(qty))
+                                            {
+                                                var qtyy = Convert.ToInt32(int.Parse(qty));
+                                                pmsk.Qty = System.Convert.ToInt32(qtyy);
+                                            }
+                                            else { continue; }
+
+                                        }
+                                        if (pmsk.Qty < 0)  //// If Any Qty < 0 we make those products as 0 
+                                        {
+                                            pmsk.Qty = 0;
+                                        }
+                                        if (Depst.Contains(StoreId.ToString()))
+                                        {
+                                            if (fname.pcat == "Soft Drinks - $0.05" || fname.pcat == "Beer $0.05 CRV")
+                                            {
+                                                pmsk.Deposit = 0.05;
+                                            }
+                                            else if (fname.pcat == "Soft Drinks - $0.10" || fname.pcat == "Beer $0.10 CRV")
+                                            {
+                                                pmsk.Deposit = 0.10;
+                                            }
+                                        }
+
+                                        if (DiffDeposit.Contains(StoreId.ToString()))
+                                        {
+
+                                            int FeeMultiplier = Convert.ToInt32(dr.Field<string>("Fee Multiplier"));
+                                            decimal deposit = FeeMultiplier * 0.05m;
+                                            pmsk.Deposit = (double)deposit;
+
+                                        }
+
+                                        if (StoreId == 11263)  //|| StoreId==11291 older one Raw file 
+                                        {
+                                            if (pmsk.Price > 0 && pmsk.Qty > 0 && (fname.pcat.ToUpper() == "ALCOHOL" || fname.pcat.ToUpper() == "DRINKS"))
+                                            {
+                                                prodlist.Add(pmsk);
+                                                full.Add(fname);
+                                            }
+                                        }
+                                        else if (StoreId == 10947)
+                                        {
+                                            if (pmsk.Price > 0 && (fname.pcat.ToUpper() != "GENERIC CIGARETTES" && fname.pcat.ToUpper() != "HOUSEHOLD"
+                                                && fname.pcat.ToUpper() != "PREMIUM CARTONS" && fname.pcat.ToUpper() != "PREMIUM CIGARETTES"
+                                                && fname.pcat.ToUpper() != "SCRATCH OFFS" && fname.pcat.ToUpper() != "SMOKE"
+                                                && fname.pcat.ToUpper() != "SUB-GENERIC CARTON" && fname.pcat.ToUpper() != "SUB-GENERIC CIGARETTES"
+                                                && fname.pcat.ToUpper() != "TOBACCO" && fname.pcat.ToUpper() != "KRATOM"
+                                                && fname.pcat.ToUpper() != "GENERIC CARTONS"))
+                                            {
+                                                prodlist.Add(pmsk);
+                                                full.Add(fname);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (pmsk.Price > 0 && pmsk.Qty > 0 && (fname.pcat != "Cigarettes" && fname.pcat != "Cigars" && fname.pcat != "Vapes"))
+                                            {
+                                                prodlist.Add(pmsk);
+                                                full.Add(fname);
+                                            }
                                         }
                                     }
                                 }
+
                                 Console.WriteLine("Generating NRSPos " + StoreId + " Product CSV Files.....");
                                 string filename = GenerateCSV.GenerateCSVFile(prodlist, "PRODUCT", StoreId, BaseUrl);
                                 Console.WriteLine("Product File Generated For NRSPos " + StoreId);

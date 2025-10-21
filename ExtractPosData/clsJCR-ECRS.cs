@@ -377,6 +377,36 @@ namespace ExtractPosData
                                             fulllist = fulllist.GroupBy(x => x.sku).Select(y => y.FirstOrDefault()).ToList();
                                         }
                                     }
+                                    else if (StoreId == 11953)
+                                    {
+                                        if (pmsk.Qty > 0 && pmsk.upc.Trim() != "#" && pmsk.Price > 0 && store.ToUpper() == "SHORES SAN PABLO" && fname.pcat.ToUpper() != "TOBACCO")
+                                        {
+                                            prodlist.Add(pmsk);
+                                            fulllist.Add(fname);
+                                            prodlist = prodlist.GroupBy(x => x.sku).Select(y => y.FirstOrDefault()).ToList();
+                                            fulllist = fulllist.GroupBy(x => x.sku).Select(y => y.FirstOrDefault()).ToList();
+                                        }
+                                    }
+                                    else if(StoreId == 12177)
+                                    {
+                                        if (pmsk.Qty > 0 && pmsk.upc.Trim() != "#" && pmsk.Price > 0 && store.ToUpper() == "SHORES LIQUORS RIVERTOWN" && fname.pcat.ToUpper() != "TOBACCO")
+                                        {
+                                            prodlist.Add(pmsk);
+                                            fulllist.Add(fname);
+                                            prodlist = prodlist.GroupBy(x => x.sku).Select(y => y.FirstOrDefault()).ToList();
+                                            fulllist = fulllist.GroupBy(x => x.sku).Select(y => y.FirstOrDefault()).ToList();
+                                        }
+                                    }
+                                    else if (StoreId == 12384)
+                                    {
+                                        if (pmsk.Qty > 0 && pmsk.upc.Trim() != "#" && pmsk.Price > 0 && store.ToUpper() == "SHORES  PALM VALLEY" && fname.pcat.ToUpper() != "TOBACCO")
+                                        {
+                                            prodlist.Add(pmsk);
+                                            fulllist.Add(fname);
+                                            prodlist = prodlist.GroupBy(x => x.sku).Select(y => y.FirstOrDefault()).ToList();
+                                            fulllist = fulllist.GroupBy(x => x.sku).Select(y => y.FirstOrDefault()).ToList();
+                                        }
+                                    }
                                 }
                             }
                             catch (Exception e)

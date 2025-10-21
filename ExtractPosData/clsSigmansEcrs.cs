@@ -295,7 +295,7 @@ namespace ExtractPosData
                                             fulllist.Add(full);
                                             prodlist.Add(pmsk);
                                         }
-                                        else if (pmsk.Qty > 0 && pmsk.Price > 0)
+                                        else if (pmsk.Price > 0)
                                         {
                                             fulllist.Add(full);
                                             prodlist.Add(pmsk);

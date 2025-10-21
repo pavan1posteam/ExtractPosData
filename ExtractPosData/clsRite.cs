@@ -19,6 +19,8 @@ namespace ExtractPosData
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
         string Rupc = ConfigurationManager.AppSettings["Riteupc"];
         string Sprice = ConfigurationManager.AppSettings["RiteSprice"];
+        string Darbyprice = ConfigurationManager.AppSettings["Darbyprice"];
+        string DiffUpcUom11416 = ConfigurationManager.AppSettings["DiffUpcUom11416"];
         public clsRite(int storeId, decimal Tax)
         {
             try
@@ -100,9 +102,20 @@ namespace ExtractPosData
                                     if (Rupc.Contains(StoreId.ToString()))
                                     {
                                         var avb = dr["sku"].ToString().Replace("#","");
-                                       
-                                         pmsk.upc = '#' +avb.ToString().Trim().Replace("-", "");
-                                         pmsk.sku = '#' +avb.ToString().Trim().Replace("-", "");
+                                        var avc = dr["upc"].ToString().Replace("#","");
+
+                                        if (DiffUpcUom11416.Contains(StoreId.ToString()))
+                                        {
+                                            pmsk.upc = '#' + avc.ToString().Trim().Replace("-", "");
+                                            pmsk.uom= dr["uom"].ToString().Trim();
+
+                                        }
+                                        else
+                                        {
+                                            pmsk.upc = '#' + avb.ToString().Trim().Replace("-", "");
+                                        }
+                                         
+                                        pmsk.sku = '#' +avb.ToString().Trim().Replace("-", "");
                                         
                                         //else
                                         //{
@@ -123,6 +136,10 @@ namespace ExtractPosData
                                         pmsk.StoreProductName = dr["StoreProductName"].ToString().Trim();
                                         pmsk.StoreDescription = dr["StoreProductName"].ToString().Trim();
                                         pmsk.Price = System.Convert.ToDecimal(dr["Price".ToLower()] == DBNull.Value ? 0 : dr["Price"].ToString() == "" ? 0: dr["Price".ToLower()]);
+                                        if (Darbyprice.Contains(StoreId.ToString()))
+                                        {
+                                            pmsk.Price = System.Convert.ToDecimal(dr["pricea".ToLower()] == DBNull.Value ? 0 : dr["pricea"].ToString() == "" ? 0 : dr["pricea".ToLower()]);
+                                        }
                                         if (Sprice.Contains(StoreId.ToString()))
                                         {
                                             if (!String.IsNullOrEmpty(dr.Field<string>("sprice")))
@@ -151,6 +168,10 @@ namespace ExtractPosData
                                             pmsk.End = "";
                                         }
                                         if (Tax == 0)
+                                        {
+                                            pmsk.Tax = Convert.ToDecimal(dr["tax"]);
+                                        }
+                                        else if (StoreId == 10232)
                                         {
                                             pmsk.Tax = Convert.ToDecimal(dr["tax"]);
                                         }
@@ -219,6 +240,7 @@ namespace ExtractPosData
 
                                         pmsk.pack = 1;
                                         pmsk.Tax = Tax;
+                                        
                                         if (pmsk.sprice > 0)
                                         {
                                             pmsk.Start = dr["salestartdate"].ToString();

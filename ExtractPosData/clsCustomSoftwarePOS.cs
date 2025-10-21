@@ -6,6 +6,7 @@ using System.Configuration;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ExtractPosData
 {
@@ -22,46 +23,29 @@ namespace ExtractPosData
                 Console.WriteLine(ex.Message);
             }
         }
-        public static DataTable ConvertCsvToDataTable(string FileName)
+        public static List<string> ConvertCsvToList(string filename)
         {
-            DataTable dtResult = new DataTable();
-            using (TextFieldParser parser = new TextFieldParser(FileName))
+            var dataLines = File.ReadAllText(filename).Split('\n').ToList();
+            dataLines.RemoveAll(a => a.Contains("Product Name,Item Number,Product Size,Retail Price,Tax Rate,Sale Price,Sale Date Range,Quanty On Hand,UPC 1,UPC 2,UPC 3"));
+
+
+            for (int k = 0; k < dataLines.Count; k++)
             {
-                parser.TextFieldType = FieldType.Delimited;
-                parser.SetDelimiters(",");
-                int i = 0;
-                int r = 0;
-                while (!parser.EndOfData)
-                {
-                    if (i == 0)
-                    {
-                        string[] columns = parser.ReadFields();
-                        foreach (string col in columns)
-                        {
-                            dtResult.Columns.Add(col);
-                        }
-                    }
-                    else
-                    {
-                        string[] rows = parser.ReadFields();
-                        dtResult.Rows.Add();
-                        int c = 0;
-                        foreach (string row in rows)
-                        {
-                            var roww = row.Replace('"', ' ').Trim();
+                dataLines[k] = dataLines[k].Replace("\"", "");
 
-                            dtResult.Rows[r][c] = roww.ToString();
-                            c++;
-                        }
+                ProductModel pmodel = new ProductModel();
+                var xdata = dataLines[k];
+                var data = dataLines[k].Split(',').ToList();
+                int idx = data.FindIndex(a => Regex.IsMatch(a, @"^-\d+$"));
+                
 
-                        r++;
-                    }
-                    i++;
-                }
+                var hh = string.Join(",", data).TrimEnd('\r');
+                dataLines[k] = hh;
+
             }
-            return dtResult; //Returning datatable 
-        }
+            return dataLines;
 
+        }
 
         public string CustomSoftwareConvertRawFile(int StoreId, decimal tax)
         {
@@ -82,37 +66,55 @@ namespace ExtractPosData
                         {
                             try
                             {
-                                DataTable dt = ConvertCsvToDataTable(Url);
+                                List<string> dt = ConvertCsvToList(Url);
+                                dt.RemoveAll(a => a.Length <= 0);
+
                                 List<ProductsModel> prodlist = new List<ProductsModel>();
 
-                                foreach (DataRow dr in dt.Rows)
+                                foreach (string products in dt)
                                 {
                                     ProductsModel pmsk = new ProductsModel();
+                                    string[] elements = products.Split(',');
 
                                     pmsk.StoreID = StoreId;
-                                    if (!string.IsNullOrEmpty(dr["UPC"].ToString()))
-                                    {
-                                        var upc = dr["UPC"].ToString().Replace(" -", "");
-                                        if (upc.Length >= 10)
-                                        {
-                                            upc = upc.Trim('0');
-                                        }
-                                        pmsk.upc = "#" + upc;
-                                        pmsk.sku = pmsk.upc;
+                                    string numericUpc = new string(elements[9].Where(char.IsDigit).ToArray());
 
+                                    string otherUPC = new string(elements[8].Where(char.IsDigit).ToArray());
+
+                                    if (!string.IsNullOrEmpty(elements[9]) && elements[9] != "")
+                                    {
+                                        if (!string.IsNullOrEmpty(numericUpc))
+                                        {
+
+                                            pmsk.upc = "#" + elements[9].ToString();
+                                           
+                                        }
+
+                                    }
+                                    else if (!string.IsNullOrEmpty(otherUPC))
+                                    {
+                                        pmsk.upc = "#" + elements[8].ToString();
                                     }
                                     else
                                     {
                                         continue;
                                     }
 
-                                    pmsk.StoreProductName = dr["Product Name"].ToString();
-                                    pmsk.StoreDescription = dr["Product Name"].ToString();
-                                    pmsk.uom = dr["Product Size"].ToString();
-                                    pmsk.Price = Convert.ToDecimal(dr["Retail Price"]);
+                                    if (!string.IsNullOrEmpty(elements[1]))
+                                    {
+                                        pmsk.sku = "#" + elements[1].ToString();
+                                    }
+
+                                    pmsk.StoreProductName = elements[0].ToString();
+                                    pmsk.StoreDescription = elements[0].ToString();
+                                    pmsk.uom = elements[2].ToString();
+                                    pmsk.Price = Convert.ToDecimal(elements[3]);
                                     pmsk.pack = 1;
-                                    pmsk.Qty = 999;
-                                    pmsk.altupc1 = "";
+                                    pmsk.Qty = Convert.ToInt32(elements[7]);
+                                    if (!string.IsNullOrEmpty(elements[10]))
+                                    {
+                                        pmsk.altupc1 = "#" + elements[10].ToString();
+                                    }
                                     pmsk.altupc2 = "";
                                     pmsk.altupc3 = "";
                                     pmsk.altupc4 = "";
@@ -127,8 +129,6 @@ namespace ExtractPosData
                                     {
                                         prodlist.Add(pmsk);
                                     }
-
-
                                 }
                                 Console.WriteLine("Generating CustomSoftwarePOS " + StoreId + " Product CSV Files.....");
                                 string filename = GenerateCSV.GenerateCSVFile(prodlist, "PRODUCT", StoreId, BaseUrl);

@@ -1,0 +1,164 @@
+using ExtractPosData.Models;
+using System;
+using System.Configuration;
+
+namespace ExtractPosData
+{
+	internal class Program
+	{
+		private static void Main(string[] args)
+		{
+			string text = ConfigurationManager.AppSettings["DeveloperId"];
+			try
+			{
+				POSSettings pOSSettings = new POSSettings();
+				pOSSettings.IntializeStoreSettings();
+				foreach (POSSetting current in pOSSettings.PosDetails)
+				{
+					if (current.PosName.ToUpper() == "KEYSTROKE")
+					{
+						if (current.StoreSettings.StoreId == 10284)
+						{
+							ClsSurfLiquor_KeyStroke clsSurfLiquor_KeyStroke = new ClsSurfLiquor_KeyStroke(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+							Console.WriteLine();
+						}
+						else
+						{
+							clsKeyStroke clsKeyStroke = new clsKeyStroke(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+							Console.WriteLine();
+						}
+					}
+					else if (current.PosName.ToUpper() == "ASI_BROUDYS")
+					{
+						clsBroudys clsBroudys = new clsBroudys(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.StoreMapId, current.StoreSettings.POSSettings.APIKey);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "ECRS")
+					{
+						if (current.StoreSettings.StoreId == 10361)
+						{
+							clsSigmansEcrs clsSigmansEcrs = new clsSigmansEcrs(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+							Console.WriteLine();
+						}
+						else if (current.StoreSettings.StoreId == 10196)
+						{
+							clsECRS clsECRS = new clsECRS(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.liquortax, current.StoreSettings.POSSettings.liquortaxrateperlitre);
+							Console.WriteLine();
+						}
+						else if (current.StoreSettings.StoreId == 10535)
+						{
+							clsECRSMacadoodles clsECRSMacadoodles = new clsECRSMacadoodles(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+							Console.WriteLine();
+						}
+					}
+					else if (current.PosName.ToUpper() == "BINDO")
+					{
+						clsBindo clsBindo = new clsBindo(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.APIKey);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "SQUAREPOS")
+					{
+						clsSquarePos clsSquarePos = new clsSquarePos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.APIKey, text, current.StoreSettings.POSSettings.category, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "SHOPKEEP")
+					{
+						ShopKeep shopKeep = new ShopKeep(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "MAGSTAR")
+					{
+						MagStar magStar = new MagStar(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "GIFTLOGIC")
+					{
+						ClsGiftLogic clsGiftLogic = new ClsGiftLogic(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "RITE")
+					{
+						clsRite clsRite = new clsRite(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.StoreMapId);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "CLOVER")
+					{
+						clsCloverPos clsCloverPos = new clsCloverPos(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.merchantId, current.StoreSettings.POSSettings.tokenid, current.StoreSettings.POSSettings.ClientId, current.StoreSettings.POSSettings.Code, current.StoreSettings.POSSettings.instock, current.StoreSettings.POSSettings.categoriess);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "MPOWER")
+					{
+						clsmPower clsmPower = new clsmPower(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.BaseUrl, current.StoreSettings.POSSettings.APIKey, text, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.LocationId, current.StoreSettings.POSSettings.Code);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "PERFECT")
+					{
+						clsPerfect clsPerfect = new clsPerfect(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "VISION")
+					{
+						clsVision clsVision = new clsVision(current.StoreSettings.POSSettings.PosFileName, current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "PROFITEER")
+					{
+						clsProfiteer clsProfiteer = new clsProfiteer(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "LIGHTSPEED")
+					{
+						if (current.StoreSettings.StoreId == 10366)
+						{
+							clsLightspeed clsLightspeed = new clsLightspeed(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+							Console.WriteLine();
+						}
+						else
+						{
+							clsLightspeedAPI clsLightspeedAPI = new clsLightspeedAPI(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.BaseUrl, current.StoreSettings.POSSettings.APIKey);
+							Console.WriteLine();
+						}
+					}
+					else if (current.PosName.ToUpper() == "RANDALLS")
+					{
+						clsRandalls clsRandalls = new clsRandalls(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "EREPLY")
+					{
+						clsERPLY clsERPLY = new clsERPLY(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax, current.StoreSettings.POSSettings.ClientId, current.StoreSettings.POSSettings.Username, current.StoreSettings.POSSettings.Password);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "JMSC")
+					{
+						clsLiquorLand clsLiquorLand = new clsLiquorLand(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "LUKAS")
+					{
+						clsLukas clsLukas = new clsLukas(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "WINE")
+					{
+						clsWine clsWine = new clsWine(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+					else if (current.PosName.ToUpper() == "MODISOFT")
+					{
+						clsModisoft clsModisoft = new clsModisoft(current.StoreSettings.StoreId, current.StoreSettings.POSSettings.tax);
+						Console.WriteLine();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				new clsEmail().sendEmail(text, "", "", "Error in ExtractPOS@" + DateTime.UtcNow + " GMT", ex.Message + "<br/>" + ex.StackTrace);
+				Console.WriteLine(ex.Message);
+			}
+			finally
+			{
+			}
+		}
+	}
+}

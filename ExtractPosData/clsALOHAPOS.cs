@@ -264,7 +264,7 @@ namespace ExtractPosData
                             {
                                 Console.WriteLine("" + e.Message);
                                 (new clsEmail()).sendEmail(DeveloperId, "", "", "Error in ExtractPOS@" + StoreId + DateTime.UtcNow + " GMT", e.Message + "<br/>" + e.StackTrace);
-                                return "Not generated file for Profiteer " + StoreId;
+                                return "Not generated file for Aloha " + StoreId;
                             }
                         }
                     }

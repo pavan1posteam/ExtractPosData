@@ -7,6 +7,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ExtractPosData
@@ -14,6 +15,8 @@ namespace ExtractPosData
     public class clsWine
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
+        string Quantity = ConfigurationManager.AppSettings["Quantity"];
+        string StaticQty = ConfigurationManager.AppSettings["StaticQty"];
 
         public clsWine(int StoreId, decimal Tax)
         {
@@ -30,6 +33,9 @@ namespace ExtractPosData
         public string WineConvertRawFile(int StoreId, decimal Tax)
         {
             string BaseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
+            string DefaultTax12024 = ConfigurationManager.AppSettings.Get("DefaultTax12024");
+            string OnlyPriceQty12024 = ConfigurationManager.AppSettings.Get("OnlyPriceQty12024");
+
             List<ProductMod> prodlist = new List<ProductMod>();
             List<FullnameModel> fullnamelist = new List<FullnameModel>();
             if (Directory.Exists(BaseUrl))
@@ -99,9 +105,12 @@ namespace ExtractPosData
                                     FullnameModel full = new FullnameModel();
                                     pmsk.StoreID = StoreId;
                                     full.upc = "#" + dr.Field<string>("Most recent upc code").ToString();
+
                                     //full.Price = System.Convert.ToDecimal(dr["Unit retail"] == DBNull.Value ? 0 : dr["Unit retail"]);
                                     full.uom = dr.Field<string>("Size description");
+                                    pmsk.uom = full.uom;
                                     full.pcat = dr.Field<string>("Group name");
+                                    full.pcat1 = dr.Field<string>("Sub-departmentname");
                                     full.pcat1 = dr.Field<string>("Sub-departmentname");
                                     full.pcat2 = "";
                                     full.country = dr.Field<string>("Country of origin");
@@ -115,6 +124,8 @@ namespace ExtractPosData
                                         continue;
                                     }
                                     pmsk.Qty = System.Convert.ToDecimal(dr["Quantity on hand"] == DBNull.Value ? 0 : dr["Quantity on hand"]);
+                                    if (StaticQty.Contains(StoreId.ToString()))
+                                        pmsk.Qty = 999;
                                     pmsk.sku = "#" + dr.Field<string>("Item number").ToString();
                                     full.sku = "#" + dr.Field<string>("Item number").ToString();
                                     if (!string.IsNullOrEmpty(dr.Field<string>("Normal description")) && !dr.Field<string>("Normal description").Contains("(DQ"))
@@ -156,7 +167,20 @@ namespace ExtractPosData
                                         pmsk.Price = Convert.ToDecimal(dr["Unit retail"]);
                                         full.Price = Convert.ToDecimal(dr["Unit retail"]);
                                     }
-                                    if (Tax == 0)
+
+                                    //Before code changes
+                                    //if (Tax == 0)
+                                    //{
+                                    //    pmsk.tax = System.Convert.ToDecimal(dr["Tax Rate"] == DBNull.Value ? 0 : dr["Tax Rate"]);
+                                    //    pmsk.tax = pmsk.tax / 100;
+                                    //}
+                                    //else
+                                    //{
+                                    //    pmsk.tax = Tax;
+                                    //}
+
+                                    //Changes as per ticket #30602 and store 12024
+                                    if (!DefaultTax12024.Contains(StoreId.ToString()) && Tax == 0)
                                     {
                                         pmsk.tax = System.Convert.ToDecimal(dr["Tax Rate"] == DBNull.Value ? 0 : dr["Tax Rate"]);
                                         pmsk.tax = pmsk.tax / 100;
@@ -165,6 +189,8 @@ namespace ExtractPosData
                                     {
                                         pmsk.tax = Tax;
                                     }
+
+
                                     if (!string.IsNullOrEmpty(pmsk.sprice))
                                     {
                                         pmsk.Start = dr.Field<string>("Date sale starts");
@@ -180,7 +206,95 @@ namespace ExtractPosData
                                     pmsk.altupc3 = "";
                                     pmsk.altupc4 = "";
                                     pmsk.altupc5 = "";
-                                    if (pmsk.Qty > 0 && pmsk.Price > 0 && full.pcat != "TOBACCO" && full.pcat != "CIGARETTES" && full.pcat != "E CIGARETTE")
+
+                                    // CRV calculation for store 12431
+                                    if (StoreId == 12431)
+                                    {
+                                        if (!full.pcat.ToUpper().Equals("FOOD"))
+                                        {
+                                            string size1 = "";
+                                            if (!string.IsNullOrEmpty(pmsk.StoreProductName) &&
+                                                Regex.IsMatch(pmsk.StoreProductName.ToUpper(), @"(\d+)\s*OZ"))
+                                            {
+
+                                                size1 = Regex.Match(pmsk.StoreProductName.ToUpper(), @"(\d+)\s*OZ").Groups[1].Value;
+                                            }
+                                            else if (!string.IsNullOrEmpty(pmsk.StoreProductName) &&
+                                                  Regex.IsMatch(pmsk.StoreProductName.ToUpper(), @"(\d+)\s*ML"))
+                                            {
+
+                                                size1 = Regex.Match(pmsk.StoreProductName.ToUpper(), @"(\d+)\s*ML").Groups[1].Value;
+                                                size1 = (Convert.ToInt32(size1) * 0.033814).ToString();     // ML to Oz conversion
+                                            }
+                                            else if (!string.IsNullOrEmpty(pmsk.StoreProductName) &&
+                                                   Regex.IsMatch(pmsk.StoreProductName.ToUpper(), @"(\d+)\s*L"))
+                                            {
+
+                                                size1 = Regex.Match(pmsk.StoreProductName.ToUpper(), @"(\d+)\s*L").Groups[1].Value;
+                                                size1 = (Convert.ToInt32(size1) * 33.814).ToString();    // L to Oz conversion
+                                            }
+
+                                            else if (!string.IsNullOrEmpty(pmsk.uom) &&
+                                                     Regex.IsMatch(pmsk.uom.ToUpper(), @"(\d+)\s*OZ"))
+                                            {
+                                                size1 = Regex.Match(pmsk.uom.ToUpper(), @"(\d+)\s*OZ").Groups[1].Value;
+                                            }
+                                            // checking for ML in uom 
+                                            else if (!string.IsNullOrEmpty(pmsk.uom) &&
+                                                    Regex.IsMatch(pmsk.uom.ToUpper(), @"(\d+)\s*ML"))
+                                            {
+                                                size1 = Regex.Match(pmsk.uom.ToUpper(), @"(\d+)\s*ML").Groups[1].Value;
+                                                size1 = (Convert.ToInt32(size1) * 0.033814).ToString();     // ML to Oz conversion
+
+                                            }
+                                            // checking for L  in uom
+                                            else if (!string.IsNullOrEmpty(pmsk.uom) &&
+                                                    Regex.IsMatch(pmsk.uom.ToUpper(), @"(\d+)\s*L"))
+                                            {
+                                                size1 = Regex.Match(pmsk.uom.ToUpper(), @"(\d+)\s*L").Groups[1].Value;
+                                                size1 = (Convert.ToInt32(size1) * 33.814).ToString();    // L to Oz conversion
+                                            }
+                                            /*else if (!string.IsNullOrEmpty(pmsk.uom) &&
+                                                     Regex.IsMatch(pmsk.uom.ToUpper(), @"(\d+)\s*OZ"))*/
+
+                                            size1 = string.IsNullOrEmpty(size1) ? "0" : size1;
+                                            double cSize = Math.Round(Convert.ToDouble(size1));
+                                            if (Convert.ToInt32(cSize) >= 24)
+                                            {
+
+                                                pmsk.deposit = pmsk.pack * Convert.ToDecimal(0.10);
+                                            }
+                                            else if (Convert.ToInt32(cSize) < 24 && cSize != 0)
+                                            {
+
+                                                pmsk.deposit = pmsk.pack * Convert.ToDecimal(0.05);
+                                            }
+                                            else
+                                            {
+                                                pmsk.deposit = 0;
+                                            }
+
+
+                                        }
+
+                                    }
+
+
+
+
+                                    #region  as of now not using
+                                    //if (pmsk.Qty > 0 && pmsk.Price > 0 && full.pcat != "TOBACCO" && full.pcat != "CIGARETTES" && full.pcat != "E CIGARETTE")
+                                    //{
+                                    //    prodlist.Add(pmsk);
+                                    //    fullnamelist.Add(full);
+                                    //}   
+                                    #endregion
+                                    if (OnlyPriceQty12024.Contains(StoreId.ToString()) && pmsk.Qty > 0 && pmsk.Price > 0)
+                                    {
+                                        prodlist.Add(pmsk);
+                                        fullnamelist.Add(full);
+                                    }
+                                    else if (pmsk.Price > 0)
                                     {
                                         prodlist.Add(pmsk);
                                         fullnamelist.Add(full);
@@ -203,6 +317,7 @@ namespace ExtractPosData
                                     string destpath = filePath.Replace(@"/Raw/", @"/RawDeleted/" + DateTime.Now.ToString("yyyyMMddhhmmss"));
                                     File.Move(filePath, destpath);
                                 }
+
 
                             }
                             catch (Exception e)
@@ -230,6 +345,7 @@ namespace ExtractPosData
             public decimal Qty { get; set; }
             public string sku { get; set; }
             public int pack { get; set; }
+            public string uom { get; set; }
             public string StoreProductName { get; set; }
             public string StoreDescription { get; set; }
             public decimal Price { get; set; }
@@ -237,11 +353,14 @@ namespace ExtractPosData
             public string Start { get; set; }
             public string End { get; set; }
             public decimal tax { get; set; }
+
+            public decimal deposit { get; set; }
             public string altupc1 { get; set; }
             public string altupc2 { get; set; }
             public string altupc3 { get; set; }
             public string altupc4 { get; set; }
             public string altupc5 { get; set; }
+           
         }
         public class FullnameModel
         {

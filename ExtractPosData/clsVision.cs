@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -13,12 +14,18 @@ namespace ExtractPosData
     class clsVision
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
+        string specificUOM11989 = ConfigurationManager.AppSettings["specificUOM11989"];
+        string specificSprice11989 = ConfigurationManager.AppSettings["specificSprice11989"];
+        string visionOutofstock = ConfigurationManager.AppSettings["visionOutofstock"];
+        string QtyPerPack = ConfigurationManager.AppSettings["QtyPerPack"];
+        
 
-        public clsVision(string FileName, int StoreId, decimal Tax, bool IsMarkUpPrice, int MarkUpValue, int LiquorDiscount, int WineDiscount)
+
+        public clsVision(string FileName, int StoreId, decimal Tax, bool IsMarkUpPrice, int MarkUpValue, int LiquorDiscount, int WineDiscount, decimal LiquorMarkup)
         {
             try
             {
-                VisionConvertRawFile(FileName, StoreId, Tax, IsMarkUpPrice, MarkUpValue, LiquorDiscount, WineDiscount);
+                VisionConvertRawFile(FileName, StoreId, Tax, IsMarkUpPrice, MarkUpValue, LiquorDiscount, WineDiscount, LiquorMarkup);
             }
             catch (Exception ex)
             {
@@ -65,9 +72,10 @@ namespace ExtractPosData
             return dtResult; //Returning Dattable  
         }
         DataTable dte = new DataTable();
-        public string VisionConvertRawFile(string PosFileName, int StoreId, decimal Tax, bool IsMarkUpPrice, int MarkUpValue, int LiquorDiscount, int WineDiscount)
+        public string VisionConvertRawFile(string PosFileName, int StoreId, decimal Tax, bool IsMarkUpPrice, int MarkUpValue, int LiquorDiscount, int WineDiscount, decimal LiquorMarkup)
         {
             string BaseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
+            string LimitedProducts = ConfigurationManager.AppSettings.Get("LimitedProducts");
             List<ProductMod> prodlist = new List<ProductMod>();
             List<FullnameModel> fullnamelist = new List<FullnameModel>();
             if (Directory.Exists(BaseUrl))
@@ -175,29 +183,26 @@ namespace ExtractPosData
                                     }
                                     // pmsk.Qty = System.Convert.ToDecimal(dr["Quantity on hand"] == "" ? 0 : dr["Quantity on hand"]);
                                     //string qty = Regex.Replace(dr["Quantity on hand"].ToString(), @"[^0-9]+", "0");
-                                    string qty = dr["Quantity on hand"].ToString();
+                                    string qty = dr["Quantity on hand"].ToString(); 
                                     if (!string.IsNullOrEmpty(qty))
                                     {
                                         pmsk.Qty = System.Convert.ToDecimal(qty);
                                     }
 
+                                    //  tckt 6506
+                                    pmsk.sku = "#" + dr.Field<string>("Item number").ToString();
+                                    full.sku = "#" + dr.Field<string>("Item number").ToString();
 
-                                    // tckt 6506
-                                    if (StoreId == 10922)
+                                    // tckt 6506, tckt #33393
+                                    if (QtyPerPack.Contains(StoreId.ToString()))
                                     {
-                                        if (full.pcat == "BEER")
+                                        if (full.pcat.ToUpper().Contains("BEER"))
                                         {
                                             pmsk.Qty = (pmsk.Qty / pmsk.pack);
                                             pmsk.Qty = Math.Floor(pmsk.Qty);
                                         }
                                     }
-                                    //  tckt 6506
-                                    pmsk.sku = "#" + dr.Field<string>("Item number").ToString();
-                                    full.sku = "#" + dr.Field<string>("Item number").ToString();
-                                    if (pmsk.sku == "#04298")
-                                    { 
-                                    
-                                    }
+
                                     if (!string.IsNullOrEmpty(dr.Field<string>("Normal description")) && !dr.Field<string>("Normal description").Contains("(DQ"))
                                     {
 
@@ -216,6 +221,7 @@ namespace ExtractPosData
                                             full.pname = (dr.Field<string>("Normal description") + " " + dr.Field<string>("Vintage")).Substring(full.pname.IndexOf('.') + 1);
                                             full.pdesc = (dr.Field<string>("Normal description") + " " + dr.Field<string>("Vintage")).Substring(full.pdesc.IndexOf('.') + 1);
                                         }
+                                        
                                     }
                                     string prc = Regex.Replace(dr["Unit retail"].ToString(), @"[^0-9.]+", "0");
                                     if (!string.IsNullOrEmpty(prc))
@@ -223,8 +229,35 @@ namespace ExtractPosData
                                         pmsk.Price = System.Convert.ToDecimal(prc);
                                         full.Price = System.Convert.ToDecimal(prc);
                                     }
-                                    string sprice = dr.Field<string>("Unit sale retail");
-                                    decimal BeerPrice = System.Convert.ToDecimal(dr["Pack retail"] == "" ? 0 : dr["Pack retail"]);
+                                    string sprice;
+
+                                    if (specificSprice11989.Contains(StoreId.ToString()))
+                                    {
+                                        sprice = dr.Field<string>("Web Unit Sale");
+                                    }
+                                    else
+                                    {
+                                        sprice = dr.Field<string>("Unit sale retail");
+                                    }
+
+                                    if (specificUOM11989.Contains(StoreId.ToString()))
+                                    {
+                                        string uoms = "4L,3L,1.75L,1.5L,500ML,200ML,100ML,50ML";
+                                        string sizeDescription = dr.Field<string>("Size description"); 
+
+                                        if (uoms.Contains(sizeDescription))
+                                        {
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            // No match found, assign value of "Size description" to pmsk.uom and full.uom
+                                            pmsk.uom = sizeDescription;
+                                            full.uom = sizeDescription;
+                                        }
+                                    }
+                                    string packRetail = dr["Pack retail"].ToString();
+                                    decimal BeerPrice = System.Convert.ToDecimal(packRetail == "" ? 0 : dr["Pack retail"]);
                                     string packsaleprice = dr.Field<string>("Pack Sale Price");
 
                                     if (pmsk.pack > 1 && BeerPrice > 0)
@@ -282,7 +315,32 @@ namespace ExtractPosData
                                         pmsk.Start = DateTime.Now.AddDays(-1).ToString("MM/dd/yyyy");
                                         pmsk.End = dr.Field<string>("Date sale ends");
                                     }
+                                    if (pmsk.StoreID == 11401 && !dr["Region"].ToString().Contains("CHAMPAGNE")) // As per ticket #39397
+                                    {
+                                        if (dr["Department name"].ToString().Contains("SPARKLING WINES"))
+                                        {
+                                            string p = dr["Invoice Cost per Bottle"].ToString();
+                                            pmsk.sprice = Math.Round((Convert.ToDecimal(p) * Convert.ToDecimal(1.25)),2).ToString();
+                                            pmsk.Price = Math.Round(Convert.ToDecimal(pmsk.sprice) * Convert.ToDecimal(1.30),2);
+                                            full.Price = pmsk.Price;
 
+                                            pmsk.Start = DateTime.Now.ToString("MM/dd/yyyy");
+                                            pmsk.End = DateTime.Now.AddDays(1).ToString("MM/dd/yyyy");
+                                        }
+                                    }
+                                    if (pmsk.StoreID == 11401 && dr["Group name"].ToString().ToUpper().Contains("LIQUOR")) // As per ticket #40844
+                                    {
+                                        if(Regex.IsMatch(pmsk.uom,@"^(700ML|750ML|1L|1.5L|1.75L)$"))
+                                        {
+                                            decimal price = Convert.ToDecimal(dr["Invoice Cost per Bottle"].ToString());
+                                            price = price * Convert.ToDecimal(LiquorMarkup);
+                                            pmsk.Price = Math.Round(price, 2);
+                                            full.Price = pmsk.Price;
+                                            pmsk.sprice = "";
+                                            pmsk.Start = "";
+                                            pmsk.End = "";
+                                        }
+                                    }
                                     pmsk.altupc1 = "";
                                     pmsk.altupc2 = "";
                                     pmsk.altupc3 = "";
@@ -290,25 +348,112 @@ namespace ExtractPosData
                                     pmsk.altupc5 = "";
                                     pmsk.Vintage = dr.Field<string>("Vintage");
 
-                                    if (pmsk.Qty > 0 && pmsk.Price > 0)
+                                    if (pmsk.Qty > 0 && pmsk.Price > 0 && !visionOutofstock.Contains(StoreId.ToString()))
                                     {
-                                        if (StoreId == 10375 || StoreId == 10376)
-                                        {
-                                            if (full.pcat1 != "KEG BEER")
-                                            {
-                                                prodlist.Add(pmsk);
-                                                fullnamelist.Add(full);
-                                            }
-                                            else { continue; }
-                                        }
-
-                                        else
+                                        prodlist.Add(pmsk);
+                                        fullnamelist.Add(full);
+                                    }
+                                    else if (visionOutofstock.Contains(StoreId.ToString()))
+                                    {
+                                        if (full.pcat1 != "KEG BEER")
                                         {
                                             prodlist.Add(pmsk);
                                             fullnamelist.Add(full);
                                         }
                                     }
+
+
+                                    if (StoreId == 12108)
+                                    {
+                                        if (dr.Field<string>("Group name").Contains("Beer"))
+                                        {
+                                            ProductMod pmsk1 = new ProductMod();
+                                            FullnameModel full1 = new FullnameModel();
+
+                                            pmsk1.StoreID = StoreId;
+                                            if (!string.IsNullOrEmpty(dr["Most recent upc code"].ToString()))
+                                            {
+                                                pmsk1.upc = "#" + dr.Field<string>("Most recent upc code").ToString();
+
+                                                full1.upc = "#" + dr.Field<string>("Most recent upc code").ToString();
+                                            }
+                                            else
+                                            {
+                                                continue;
+                                            }
+                                            pmsk1.sku = "#" + dr.Field<string>("Item number").ToString();
+                                            full1.sku = "#" + dr.Field<string>("Item number").ToString();
+
+                                            full1.pcat = dr.Field<string>("Group name");
+                                            full1.pcat1 = dr.Field<string>("Sub-departmentname");
+                                            full1.pcat2 = "";
+
+                                            string dqty = dr["Quantity on hand"].ToString();
+                                            if (!string.IsNullOrEmpty(dqty))
+                                            {
+                                                pmsk1.Qty = System.Convert.ToDecimal(dqty);
+                                            }
+
+                                            string packRetail1 = dr["Pack retail"].ToString();
+                                            BeerPrice = System.Convert.ToDecimal(packRetail1 == "" ? 0 : dr["Pack retail"]);
+                                            packsaleprice = dr.Field<string>("Pack Sale Price");
+                                            string packs = Regex.Replace(dr["Units per case"].ToString(), @"[^0-9]", "1");
+                                            pmsk1.pack = System.Convert.ToInt32(packs);
+                                            full1.pack = System.Convert.ToInt32(packs);
+
+                                            if (full1.pcat.ToUpper().Contains("BEER"))
+                                            {
+                                                pmsk1.Qty = (pmsk1.Qty / pmsk1.pack);
+                                                pmsk1.Qty = Math.Floor(pmsk1.Qty);
+                                            }
+
+                                            pmsk1.uom = "Case";
+                                            full1.uom = "Case";
+
+                                            if (!string.IsNullOrEmpty(dr.Field<string>("Normal description")) && !dr.Field<string>("Normal description").Contains("(DQ"))
+                                            {
+
+                                                pmsk1.StoreProductName = dr.Field<string>("Normal description");
+                                                pmsk1.StoreDescription = dr.Field<string>("Normal description");
+                                                full1.pname = dr.Field<string>("Normal description");
+                                                full1.pdesc = dr.Field<string>("Normal description");
+                                            }
+
+                                            string price = Regex.Replace(dr["(Warm) Case retail"].ToString(), @"[^0-9.]+", "0");
+                                            if (!string.IsNullOrEmpty(price))
+                                            {
+                                                pmsk1.Price = System.Convert.ToDecimal(price);
+                                                full1.Price = System.Convert.ToDecimal(price);
+                                            }
+
+                                            pmsk1.sprice = "0";
+                                            pmsk1.Start = "";
+                                            pmsk1.End = "";
+
+
+
+                                            pmsk1.tax = Tax;
+
+                                            full1.country = dr.Field<string>("Country of origin");
+                                            full1.region = dr.Field<string>("Region");
+
+                                            pmsk1.Vintage = dr.Field<string>("Vintage");
+
+
+
+                                            if (pmsk1.Qty > 0 && pmsk1.Price > 0 && !visionOutofstock.Contains(StoreId.ToString()))
+                                            {
+                                                prodlist.Add(pmsk1);
+                                                fullnamelist.Add(full1);
+                                            }
+                                        }
+
+                                    }
                                 }
+
+
+
+
                                 var filess = directory.GetFiles().ToList();
                                 //var aaa = filess.Select(x => x.Name.Contains("Garnet_Wine_and_Liquor.csv"));
                                 var G_filepath = directory + "Garnet_Wine_and_Liquor.csv";
@@ -347,13 +492,26 @@ namespace ExtractPosData
                                         prodlist.Add(pmsk);
                                     }
                                 }
-                                Console.WriteLine("Generating Vision " + StoreId + " Product CSV Files.....");
-                                string filename = GenerateCSV.GenerateCSVFile(prodlist, "PRODUCT", StoreId, BaseUrl);
-                                Console.WriteLine("Product File Generated For Vision " + StoreId);
-                                Console.WriteLine();
-                                Console.WriteLine("Generating Vision " + StoreId + " FullNameFile CSV Files.....");
-                                string fullfilename = GenerateCSV.GenerateCSVFile(fullnamelist, "FULLNAME", StoreId, BaseUrl);
-                                Console.WriteLine("Fullname File Generated For Vision " + StoreId);
+                                if (LimitedProducts.Contains(StoreId.ToString()) && prodlist.Count > 10000)
+                                {
+                                    Console.WriteLine("Generating Vision " + StoreId + " Product CSV Files.....");
+                                    string filename = GenerateCSV.GenerateCSVFile(prodlist, "PRODUCT", StoreId, BaseUrl);
+                                    Console.WriteLine("Product File Generated For Vision " + StoreId);
+                                    Console.WriteLine();
+                                    Console.WriteLine("Generating Vision " + StoreId + " FullNameFile CSV Files.....");
+                                    string fullfilename = GenerateCSV.GenerateCSVFile(fullnamelist, "FULLNAME", StoreId, BaseUrl);
+                                    Console.WriteLine("Fullname File Generated For Vision " + StoreId);
+                                }
+                                else if (!LimitedProducts.Contains(StoreId.ToString()))
+                                {
+                                    Console.WriteLine("Generating Vision " + StoreId + " Product CSV Files.....");
+                                    string filename = GenerateCSV.GenerateCSVFile(prodlist, "PRODUCT", StoreId, BaseUrl);
+                                    Console.WriteLine("Product File Generated For Vision " + StoreId);
+                                    Console.WriteLine();
+                                    Console.WriteLine("Generating Vision " + StoreId + " FullNameFile CSV Files.....");
+                                    string fullfilename = GenerateCSV.GenerateCSVFile(fullnamelist, "FULLNAME", StoreId, BaseUrl);
+                                    Console.WriteLine("Fullname File Generated For Vision " + StoreId);
+                                }
 
 
                                 string[] filePaths = Directory.GetFiles(BaseUrl + "/" + StoreId + "/Raw/");

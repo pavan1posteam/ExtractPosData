@@ -2,6 +2,7 @@
 using ExtractPosData.Models;
 using Microsoft.VisualBasic.FileIO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -21,8 +22,10 @@ namespace ExtractPosData
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
         string baseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
+        string Irrespectiveofstock = ConfigurationManager.AppSettings.Get("Irrespectiveofstock");
         string packSizeMappingPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"MacdoodlesPackMapping.json");
-
+        string StaticQty = ConfigurationManager.AppSettings["StaticQty"];
+        string Quantity = ConfigurationManager.AppSettings["Quantity"];
         public clsECRSMacadoodles(int StoreId, decimal tax)
         {
             try
@@ -105,6 +108,8 @@ namespace ExtractPosData
         {
             string BaseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
             string RemoveCat = ConfigurationManager.AppSettings.Get("RemoveCat");
+            string Pricelevl2 = ConfigurationManager.AppSettings.Get("Pricelevl2");
+
             if (Directory.Exists(BaseUrl))
             {
                 if (Directory.Exists(BaseUrl + "/" + StoreId + "/Raw/"))
@@ -127,8 +132,9 @@ namespace ExtractPosData
                             xmlDoc.LoadXml(response);
 
                             var json = JsonConvert.SerializeXmlNode(xmlDoc).Replace("@", "");
-                            json = "{" + json.Substring(26, json.Length - 26);
-                            var itms = JsonConvert.DeserializeObject<Root>(json);
+                            var jsonObj = JObject.Parse(json);
+                            var extractedJson = jsonObj["Items"].ToString();
+                            var itms = JsonConvert.DeserializeObject<Items>(extractedJson);
 
                             List<ProductsModel> prodlist = new List<ProductsModel>();
                             List<FullNameProductModel> fulllist = new List<FullNameProductModel>();
@@ -139,18 +145,23 @@ namespace ExtractPosData
 
                             ProductsModel prod = new ProductsModel();
                             FullNameProductModel fname = new FullNameProductModel();
-                            foreach (var item in itms.Items.Item)
+                            foreach (var item in itms.Item)
                             {
+                                Decimal Pricelevel1 = 0;
+                                Decimal SPricelevel1 = 0;
                                 foreach (var prcitem in item.Pricing.Price)
                                 {
                                     prod = new ProductsModel();
                                     fname = new FullNameProductModel();
 
                                     prod.StoreID = StoreId;
-                                    prod.upc = '#' + item.scancode;
+                                    prod.upc = '#' + item.scancode;                           
                                     fname.upc = '#' + item.scancode;
                                     decimal qty = Convert.ToDecimal(item.OnHand);
-                                    prod.Qty = Convert.ToInt32(qty) > 0 ? Convert.ToInt32(qty) : 0;
+                                    if (StaticQty.Contains(StoreId.ToString()))
+                                        prod.Qty = 999;
+                                    else
+                                        prod.Qty = Convert.ToInt32(qty) > 0 ? Convert.ToInt32(qty) : 0;
                                     prod.sku = '#' + item.scancode;
                                     fname.sku = '#' + item.scancode;
                                     prod.pack = 1;
@@ -164,8 +175,8 @@ namespace ExtractPosData
                                     if (fname.pcat.ToUpper() == "DELETE DEPT." || fname.pcat.ToUpper().Contains("ALLOCATIONS") || fname.pcat.ToUpper() == "CIGARETTES/SMOKELESS" || fname.pcat.ToUpper() == "CIGARS/COMMERCIAL" || fname.pcat.ToUpper() == "CIGARS/HUMIDOR" || fname.pcat.ToUpper() == "Allocated" || fname.pcat.ToUpper() == "CIGARETTES")
                                     {
                                         continue;
-                                    }                                 
-                                    if (RemoveCat.Contains(StoreId.ToString()) && fname.pcat.ToUpper() == "KEG DEPOSIT PO")
+                                    }
+                                    if (RemoveCat.Contains(StoreId.ToString()) && fname.pcat.ToUpper() == "KEG DEPOSIT PO" || fname.pcat.ToUpper() == "SCRATCHERS")
                                     {
                                         continue;
                                     }
@@ -174,7 +185,43 @@ namespace ExtractPosData
                                     fname.country = "";
                                     fname.region = "";
                                     var priceLevel = Convert.ToInt32(prcitem.priceLevel);
-                                    if (priceLevel == 1)
+                                    if(priceLevel == 1)
+                                    {
+                                        Pricelevel1 = Convert.ToDecimal(prcitem.price);
+                                        if (item.Pricing.PromotionalPricing != null )
+                                        {
+                                            SPricelevel1 = Convert.ToDecimal(item.Pricing.PromotionalPricing.price.FirstOrDefault().price);
+                                        }                                     
+                                    }
+                                    if (Pricelevl2.Contains(StoreId.ToString()) && priceLevel == 2 && Convert.ToDecimal(prcitem.price) > 0)
+                                    {
+                                        prod.Price = Convert.ToDecimal(prcitem.price);
+                                        fname.Price = Convert.ToDecimal(prcitem.price);
+
+                                        if (item.Pricing.PromotionalPricing != null)
+                                        {
+                                            prod.sprice = Convert.ToDecimal(item.Pricing.PromotionalPricing.price[2].price);
+                                        }
+                                        else
+                                        {
+                                            prod.sprice = 0;
+                                        }
+                                    }
+                                    else if(Pricelevl2.Contains(StoreId.ToString()) && priceLevel == 2) 
+                                    {
+                                        prod.Price = Pricelevel1;
+                                        fname.Price = Pricelevel1;
+
+                                        if (item.Pricing.PromotionalPricing != null)
+                                        {
+                                            prod.sprice = Convert.ToDecimal(item.Pricing.PromotionalPricing.price.FirstOrDefault().price);
+                                        }
+                                        else
+                                        {
+                                            prod.sprice = 0;
+                                        }
+                                    }
+                                    else if(!Pricelevl2.Contains(StoreId.ToString()) && priceLevel == 1)
                                     {
                                         prod.Price = Convert.ToDecimal(prcitem.price);
                                         fname.Price = Convert.ToDecimal(prcitem.price);
@@ -246,7 +293,14 @@ namespace ExtractPosData
                                     prod.altupc3 = "";
                                     prod.altupc4 = "";
                                     prod.altupc5 = "";
-
+                                    if (Irrespectiveofstock.Contains(StoreId.ToString()))
+                                    {
+                                        if (prod.Price > 0)
+                                        {
+                                            prodlist.Add(prod);
+                                            fulllist.Add(fname);
+                                        }
+                                    }
                                     if (StoreId == 10535)
                                     {
                                         if (prod.Qty > 0 && prod.Price > 0 && fname.pcat != "Build Your Own")
@@ -255,9 +309,22 @@ namespace ExtractPosData
                                             fulllist.Add(fname);
                                         }
                                     }
+                                    else if (StoreId == 10810 )
+                                    {
+                                        if (prod.Qty > 0 && prod.Price>0 && fname.pcat.ToLower() != "lottery")
+                                        {
+                                            prodlist.Add(prod);
+                                            fulllist.Add(fname);
+                                        }
+                                    }
                                     else
                                     {
-                                        if (prod.Qty > 0 && prod.Price > 0)
+                                        if (Quantity.Contains(StoreId.ToString()) && prod.Qty > 0 && prod.Price > 0)
+                                        {
+                                            prodlist.Add(prod);
+                                            fulllist.Add(fname);
+                                        }
+                                        else if (prod.Price > 0)
                                         {
                                             prodlist.Add(prod);
                                             fulllist.Add(fname);

@@ -15,6 +15,8 @@ namespace ExtractPosData
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
         string BaseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
+        string StaticQty = ConfigurationManager.AppSettings["StaticQty"];
+        string Quantity = ConfigurationManager.AppSettings["Quantity"];
 
         public clsPetrasoftSmart(int StoreId, decimal Tax)
         {
@@ -110,8 +112,15 @@ namespace ExtractPosData
                                     {
                                         continue;
                                     }
-                                    var qty = dr.Field<string>("On Hand").Replace("(", "").Replace(")", "");
-                                    pmsk.Qty = Convert.ToDecimal(qty) > 0 ? Convert.ToDecimal(qty) : 0;
+                                    
+                                    if (StaticQty.Contains(StoreId.ToString()))
+                                        pmsk.Qty = 999;
+                                    else
+                                    {
+                                        var qty = dr.Field<string>("On Hand").Replace("(", "").Replace(")", "");
+                                        pmsk.Qty = Convert.ToDecimal(qty) > 0 ? Convert.ToDecimal(qty) : 0;
+                                    }
+                                    
                                     pmsk.StoreProductName = dr.Field<string>("Item Name");
                                     fname.pname = dr.Field<string>("Item Name");
                                     pmsk.StoreDescription = dr.Field<string>("Item Name").Trim();
@@ -133,7 +142,12 @@ namespace ExtractPosData
                                     fname.uom = dr.Field<string>("Size");
                                     fname.region = "";
                                     fname.country = "";
-                                    if ( fname.pcat != "Other Tobacco Produc" && fname.pcat != "E-Cigs" && fname.pcat != "Cigarettes")
+                                    if (Quantity.Contains(StoreId.ToString()) && pmsk.Qty > 0 && pmsk.Price > 0 && (fname.pcat != "Other Tobacco Produc" || fname.pcat != "E-Cigs" || fname.pcat != "Cigarettes"))
+                                    {
+                                        prodlist.Add(pmsk);
+                                        full.Add(fname);
+                                    }
+                                    else if (pmsk.Price > 0 && (fname.pcat != "Other Tobacco Produc" || fname.pcat != "E-Cigs" || fname.pcat != "Cigarettes"))
                                     {
                                         prodlist.Add(pmsk);
                                         full.Add(fname);

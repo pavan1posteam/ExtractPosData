@@ -116,7 +116,9 @@ namespace ExtractPosData
                                         decimal qty = Convert.ToDecimal(dr["Qty"]);
                                         pmsk.Qty = Convert.ToInt32(qty);
                                     }
-                                    else { continue; }
+                                    else { 
+                                        continue;
+                                    }
                                     if (!string.IsNullOrEmpty(dr["Sku"].ToString()))
                                     {
                                         if (dr["Sku"].ToString().Contains("#"))
@@ -130,7 +132,10 @@ namespace ExtractPosData
                                             full.sku = "#" + dr["Sku"].ToString();
                                         }
                                     }
-                                    else { continue; }
+                                    else { 
+
+                                        continue;
+                                    }
                                     if (!string.IsNullOrEmpty(dr.Field<string>("storeproductname")))
                                     {
                                         pmsk.StoreProductName = dr.Field<string>("storeproductname");
@@ -163,8 +168,17 @@ namespace ExtractPosData
                                         pmsk.Start = "";
                                         pmsk.End = "";
                                     }
-                                    full.uom = ""; full.pcat = ""; full.pcat1 = ""; full.pcat2 = ""; full.country = ""; full.region = "";
-                                    pmsk.altupc1 = ""; pmsk.altupc2 = ""; pmsk.altupc3 = ""; pmsk.altupc4 = ""; pmsk.altupc5 = "";
+                                    full.uom = ""; 
+                                    full.pcat = "";
+                                    full.pcat1 = ""; 
+                                    full.pcat2 = ""; 
+                                    full.country = ""; 
+                                    full.region = "";
+                                    pmsk.altupc1 = ""; 
+                                    pmsk.altupc2 = ""; 
+                                    pmsk.altupc3 = ""; 
+                                    pmsk.altupc4 = ""; 
+                                    pmsk.altupc5 = "";
                                     if (pmsk.Qty > 0 && pmsk.Price > 0)
                                     {
                                         prodlist.Add(pmsk);

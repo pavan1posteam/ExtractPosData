@@ -1,5 +1,6 @@
 ﻿using ExtractPosData.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -16,6 +17,7 @@ namespace ExtractPosData
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
         string baseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
+        string DifferentPricelevel = ConfigurationManager.AppSettings.Get("DifferentPricelevel");
 
         public clsCatapultXML(int StoreId, decimal tax, decimal winetax, decimal liquortax, decimal beertax)
         {
@@ -27,7 +29,7 @@ namespace ExtractPosData
             {
                 Console.WriteLine(ex.Message);
             }
-            
+
         }
         public string ConvertRawFile(int StoreId, decimal Tax, decimal winetax, decimal liquortax, decimal beertax)
         {
@@ -53,16 +55,21 @@ namespace ExtractPosData
                             XmlDocument xmlDoc = new XmlDocument();
                             xmlDoc.LoadXml(response);
 
+                            //var json = JsonConvert.SerializeXmlNode(xmlDoc).Replace("@", "");
+                            //json = "{" + json.Substring(26, json.Length - 26);
+                            //var itms = JsonConvert.DeserializeObject<Root>(json);
+
                             var json = JsonConvert.SerializeXmlNode(xmlDoc).Replace("@", "");
-                            json = "{" + json.Substring(26, json.Length - 26);
-                            var itms = JsonConvert.DeserializeObject<Root>(json);
+                            var jsonObj = JObject.Parse(json);
+                            var extractedJson = jsonObj["Items"].ToString();
+                            var itms = JsonConvert.DeserializeObject<Items>(extractedJson);
 
                             List<ProductsModel> prodlist = new List<ProductsModel>();
                             List<FullNameProductModel> fulllist = new List<FullNameProductModel>();
 
                             ProductsModel prod = new ProductsModel();
                             FullNameProductModel fname = new FullNameProductModel();
-                            foreach (var item in itms.Items.Item)
+                            foreach (var item in itms.Item)
                             {
                                 foreach (var prcitem in item.Pricing.Price)
                                 {
@@ -89,7 +96,20 @@ namespace ExtractPosData
                                     fname.country = "";
                                     fname.region = "";
                                     var priceLevel = Convert.ToInt32(prcitem.priceLevel);
-                                    if (priceLevel == 1)
+                                    if (priceLevel == 2 && DifferentPricelevel.Contains(StoreId.ToString()))
+                                    {
+                                        prod.Price = Convert.ToDecimal(prcitem.price);
+                                        fname.Price = Convert.ToDecimal(prcitem.price);
+                                        if (item.Pricing.PromotionalPricing != null)
+                                        {
+                                            prod.sprice = Convert.ToDecimal(item.Pricing.PromotionalPricing.price[1].price);
+                                        }
+                                        else
+                                        {
+                                            prod.sprice = 0;
+                                        }
+                                    }
+                                    else if (priceLevel == 1 && !DifferentPricelevel.Contains(StoreId.ToString()))
                                     {
                                         prod.Price = Convert.ToDecimal(prcitem.price);
                                         fname.Price = Convert.ToDecimal(prcitem.price);
@@ -103,7 +123,7 @@ namespace ExtractPosData
                                         }
                                     }
                                     else
-                                    { continue; }
+                                    { continue; }                                
 
                                     if (prod.sprice > 0)
                                     {

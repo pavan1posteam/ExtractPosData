@@ -17,11 +17,12 @@ namespace ExtractPosData
     class clsBottlePos
     {
         string DeveloperId = ConfigurationManager.AppSettings["DeveloperId"];
-        public clsBottlePos(int storeId, decimal Tax)
+        public static int column_count;
+        public clsBottlePos(int storeId, decimal Tax, decimal beertax, decimal winetax)
         {
             try
             {
-                BottlePOsConvertRawFile(storeId, Tax);
+                BottlePOsConvertRawFile(storeId, Tax, beertax, winetax);
             }
             catch (Exception e)
             {
@@ -34,36 +35,37 @@ namespace ExtractPosData
             DataTable dt = new DataTable();
             try
             {
-                    using (TextFieldParser parser = new TextFieldParser(FileName))
+                using (TextFieldParser parser = new TextFieldParser(FileName))
+                {
+                    parser.TextFieldType = FieldType.Delimited;
+                    parser.Delimiters = new string[] { "," };
+                    parser.HasFieldsEnclosedInQuotes = true;
+
+                    string[] columns = parser.ReadFields();
+                    for (int i = 0; i < columns.Length; i++)
                     {
-                        parser.TextFieldType = FieldType.Delimited;
-                        parser.Delimiters = new string[] { "," };
-                        parser.HasFieldsEnclosedInQuotes = true;
+                        dt.Columns.Add(columns[i], typeof(string));
+                    }
+                    column_count = dt.Columns.Count;
 
-                        string[] columns = parser.ReadFields();
+                    while (!parser.EndOfData)
+                    {
+                        string[] fields = parser.ReadFields();
+                        DataRow newrow = dt.NewRow();
 
-                            for (int i = 0; i < columns.Length; i++)
-                            {
-                                dt.Columns.Add(columns[i], typeof(string));
-                            }
-                    
-                        while (!parser.EndOfData)
+                        for (int i = 0; i < fields.Length; i++)
                         {
-                            string[] fields = parser.ReadFields();
-                            DataRow newrow = dt.NewRow();
-
-                            for (int i = 0; i < fields.Length; i++)
+                            if (dt.Columns.Count != fields.Length)
                             {
-                                if (dt.Columns.Count != fields.Length)
-                                {
-                                    break;
-                                }
-                                newrow[i] = fields[i];
+                                break;
                             }
-
-                            dt.Rows.Add(newrow);
+                            newrow[i] = fields[i];
                         }
+
+                        dt.Rows.Add(newrow);
+                    }
                 }
+
             }
             catch (Exception e)
             {
@@ -71,9 +73,11 @@ namespace ExtractPosData
             }
             return dt; //Returning Dattable  
         }
-        public string BottlePOsConvertRawFile(int StoreId, decimal Tax)
+        public string BottlePOsConvertRawFile(int StoreId, decimal Tax, decimal beertax, decimal winetax)
         {
             string BaseUrl = ConfigurationManager.AppSettings.Get("BaseDirectory");
+            string StaticQty = ConfigurationManager.AppSettings.Get("StaticQty");
+            string Quantity = ConfigurationManager.AppSettings.Get("Quantity");
             if (Directory.Exists(BaseUrl))
             {
                 if (Directory.Exists(BaseUrl + "/" + StoreId + "/Raw/"))
@@ -95,46 +99,53 @@ namespace ExtractPosData
                                 var dtr = from s in dt.AsEnumerable() select s;
                                 List<ProductsModel> prodlist = new List<ProductsModel>();
                                 List<FullNameProductModel> fulllist = new List<FullNameProductModel>();
-                                dynamic upcs;
-                                dynamic taxs;
-                                int barlenth = 0;
-                                dynamic upcs2;
-                                dt.DefaultView.Sort = "SKU";
-                                foreach (DataRow dr in dt.Rows)
+                                if (clsBottlePos.column_count == 6)
                                 {
-                                    try
+                                    dynamic upcs;
+                                    //dynamic taxs;
+                                    int barlenth = 0;
+                                    //dynamic upcs2;
+                                    dt.DefaultView.Sort = "SKU";
+                                    foreach (DataRow dr in dt.Rows)
                                     {
-                                        ProductsModel pmsk = new ProductsModel();
-                                        FullNameProductModel full = new FullNameProductModel();
-                                        pmsk.StoreID = StoreId;
-
-                                        if (dr[0].ToString().Contains("rows affected"))
-                                        { continue; }
-                                        dt.DefaultView.Sort = "SKU";
-                                        upcs = dt.DefaultView.FindRows(dr["SKU"]).ToArray();
-                                        /// upcs2 = dt.DefaultView.FindRows(dr["BARCODE2"]).ToArray();
-                                        barlenth = ((Array)upcs).Length;
-                                        pmsk.StoreID = StoreId;
-
-                                        if (StoreId == 11113)
+                                        try
                                         {
+                                            ProductsModel pmsk = new ProductsModel();
+                                            FullNameProductModel full = new FullNameProductModel();
+                                            pmsk.StoreID = StoreId;
 
-                                            if (barlenth > 0)
+                                            if (dr[0].ToString().Contains("rows affected"))
+                                            { continue; }
+                                            dt.DefaultView.Sort = "SKU";
+                                            upcs = dt.DefaultView.FindRows(dr["SKU"]).ToArray();
+                                            /// upcs2 = dt.DefaultView.FindRows(dr["BARCODE2"]).ToArray();
+                                            barlenth = ((Array)upcs).Length;
+                                            pmsk.StoreID = StoreId;
+
+                                            if (StoreId == 11113)
                                             {
-                                                for (int i = 0; i <= barlenth - 1; i++)
+
+                                                if (barlenth > 0)
                                                 {
-                                                    if (i == 0)
+                                                    for (int i = 0; i <= barlenth - 1; i++)
                                                     {
-                                                        if (!string.IsNullOrEmpty(dr["UPC"].ToString()))
+                                                        if (i == 0)
                                                         {
-                                                            var upc = "#" + upcs[i]["UPC"].ToString().ToLower();
-                                                            string numberUpc = Regex.Replace(upc, "[^0-9.]", "");
-                                                            if (numberUpc.Count() >= 7 && numberUpc.Count() <= 15)
+                                                            if (!string.IsNullOrEmpty(dr["UPC"].ToString()))
                                                             {
-                                                                if (!string.IsNullOrEmpty(numberUpc))
+                                                                var upc = "#" + upcs[i]["UPC"].ToString().ToLower();
+                                                                string numberUpc = Regex.Replace(upc, "[^0-9.]", "");
+                                                                if (numberUpc.Count() >= 7 && numberUpc.Count() <= 15)
                                                                 {
-                                                                    pmsk.upc = "#" + numberUpc.Trim().ToLower();
-                                                                    full.upc = "#" + numberUpc.Trim().ToLower();
+                                                                    if (!string.IsNullOrEmpty(numberUpc))
+                                                                    {
+                                                                        pmsk.upc = "#" + numberUpc.Trim().ToLower();
+                                                                        full.upc = "#" + numberUpc.Trim().ToLower();
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        continue;
+                                                                    }
                                                                 }
                                                                 else
                                                                 {
@@ -146,111 +157,188 @@ namespace ExtractPosData
                                                                 continue;
                                                             }
                                                         }
-                                                        else
+                                                        if (i == 1)
                                                         {
-                                                            continue;
+                                                            pmsk.altupc1 = "#" + upcs[i]["UPC"];
                                                         }
-                                                    }
-                                                    if (i == 1)
-                                                    {
-                                                        pmsk.altupc1 = "#" + upcs[i]["UPC"];
-                                                    }
-                                                    if (i == 2)
-                                                    {
-                                                        pmsk.altupc2 = "#" + upcs[i]["UPC"];
-                                                    }
-                                                    if (i == 3)
-                                                    {
-                                                        pmsk.altupc3 = "#" + upcs[i]["UPC"];
-                                                    }
-                                                    if (i == 4)
-                                                    {
-                                                        pmsk.altupc4 = "#" + upcs[i]["UPC"];
-                                                    }
-                                                    if (i == 5)
-                                                    {
-                                                        pmsk.altupc5 = "#" + upcs[i]["UPC"];
+                                                        if (i == 2)
+                                                        {
+                                                            pmsk.altupc2 = "#" + upcs[i]["UPC"];
+                                                        }
+                                                        if (i == 3)
+                                                        {
+                                                            pmsk.altupc3 = "#" + upcs[i]["UPC"];
+                                                        }
+                                                        if (i == 4)
+                                                        {
+                                                            pmsk.altupc4 = "#" + upcs[i]["UPC"];
+                                                        }
+                                                        if (i == 5)
+                                                        {
+                                                            pmsk.altupc5 = "#" + upcs[i]["UPC"];
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
-                                        else
-                                        {
-                                            if (!string.IsNullOrEmpty(dr["UPC"].ToString()))
+                                            else
                                             {
-                                                pmsk.upc = "#" + dr["UPC"].ToString();
-                                                full.upc = "#" + dr["UPC"].ToString();
+                                                if (!string.IsNullOrEmpty(dr["UPC"].ToString()))
+                                                {
+                                                    pmsk.upc = "#" + dr["UPC"].ToString();
+                                                    full.upc = "#" + dr["UPC"].ToString();
+                                                }
+                                                else
+                                                {
+                                                    continue;
+                                                }
+                                            }
+                                            if (StaticQty.Contains(StoreId.ToString()))
+                                                pmsk.Qty = 999;
+                                            else
+                                            {
+                                                decimal qty = Convert.ToDecimal(dr["QTY"]);
+                                                pmsk.Qty = Convert.ToInt32(qty) > 0 ? Convert.ToInt32(qty) : 0;
+                                            }
+
+                                            pmsk.sku = "#" + dr.Field<string>("SKU");
+                                            full.sku = "#" + dr.Field<string>("SKU");
+
+                                            if (!string.IsNullOrEmpty(dr.Field<string>("NAME")))
+                                            {
+                                                pmsk.StoreProductName = dr.Field<string>("NAME").Trim();
+                                                pmsk.StoreDescription = dr.Field<string>("NAME").Trim();
+                                                full.pname = dr.Field<string>("NAME").Trim();
+                                                full.pdesc = dr.Field<string>("NAME").Trim();
                                             }
                                             else
                                             {
                                                 continue;
                                             }
-                                        }
-                                        decimal qty = Convert.ToDecimal(dr["QTY"]);
-                                        pmsk.Qty = Convert.ToInt32(qty) > 0 ? Convert.ToInt32(qty) : 0; 
-
-                                        pmsk.sku = "#" + dr.Field<string>("SKU");
-                                        full.sku = "#" + dr.Field<string>("SKU");
-
-                                        if (!string.IsNullOrEmpty(dr.Field<string>("NAME")))
-                                        {
-                                            pmsk.StoreProductName = dr.Field<string>("NAME").Trim();
-                                            pmsk.StoreDescription = dr.Field<string>("NAME").Trim();
-                                            full.pname = dr.Field<string>("NAME").Trim();
-                                            full.pdesc = dr.Field<string>("NAME").Trim();
-                                        }
-                                        else
-                                        {
-                                            continue;
-                                        }
-                                        pmsk.Price = System.Convert.ToDecimal(dr["PRICE"] == DBNull.Value ? 0 : dr["PRICE"]);
-                                        full.Price = System.Convert.ToDecimal(dr["PRICE"] == DBNull.Value ? 0 : dr["PRICE"]);
-                                        if (pmsk.Price <= 0 || full.Price <= 0)
-                                        {
-                                            continue;
-                                        }
-                                        full.pcat = "";
-                                        full.pcat1 = "";
-                                        full.pcat2 = "";
-                                        full.country = "";
-                                        full.region = "";
-                                        pmsk.sprice = 0;
-                                        pmsk.pack = 1;
-                                        full.pack = 1;
-                                        pmsk.uom = dr.Field<string>("SIZE");
-                                        full.uom = dr.Field<string>("SIZE");
-                                        pmsk.Tax = Tax;
-
-                                        pmsk.Start = "";
-                                        pmsk.End = "";
-                                        pmsk.altupc1 = "";
-                                        pmsk.altupc2 = "";
-                                        pmsk.altupc3 = "";
-                                        pmsk.altupc4 = "";
-                                        pmsk.altupc5 = "";
-
-                                        if (StoreId == 11113)
-                                        {
-                                            if (pmsk.Price > 0)
+                                            pmsk.Price = System.Convert.ToDecimal(dr["PRICE"] == DBNull.Value ? 0 : dr["PRICE"]);
+                                            full.Price = System.Convert.ToDecimal(dr["PRICE"] == DBNull.Value ? 0 : dr["PRICE"]);
+                                            if (pmsk.Price <= 0 || full.Price <= 0)
                                             {
-                                                fulllist.Add(full);
-                                                prodlist.Add(pmsk);
+                                                continue;
+                                            }
+                                            full.pcat = "";
+                                            full.pcat1 = "";
+                                            full.pcat2 = "";
+                                            full.country = "";
+                                            full.region = "";
+                                            pmsk.sprice = 0;
+                                            pmsk.pack = 1;
+                                            full.pack = 1;
+                                            pmsk.uom = dr.Field<string>("SIZE");
+                                            full.uom = dr.Field<string>("SIZE");
+                                            pmsk.Tax = Tax;
+
+                                            pmsk.Start = "";
+                                            pmsk.End = "";
+                                            pmsk.altupc1 = "";
+                                            pmsk.altupc2 = "";
+                                            pmsk.altupc3 = "";
+                                            pmsk.altupc4 = "";
+                                            pmsk.altupc5 = "";
+
+                                            if (StoreId == 11113)
+                                            {
+                                                if (pmsk.Price > 0)
+                                                {
+                                                    fulllist.Add(full);
+                                                    prodlist.Add(pmsk);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (Quantity.Contains(StoreId.ToString()) && pmsk.Qty > 0 && pmsk.Price > 0)
+                                                {
+                                                    fulllist.Add(full);
+                                                    prodlist.Add(pmsk);
+                                                    prodlist = prodlist.GroupBy(x => x.upc).Select(y => y.FirstOrDefault()).ToList();
+                                                    fulllist = fulllist.GroupBy(x => x.upc).Select(y => y.FirstOrDefault()).ToList();
+                                                }
+                                                else if (pmsk.Qty > 0 && pmsk.Price > 0)
+                                                {
+                                                    fulllist.Add(full);
+                                                    prodlist.Add(pmsk);
+                                                    prodlist = prodlist.GroupBy(x => x.upc).Select(y => y.FirstOrDefault()).ToList();
+                                                    fulllist = fulllist.GroupBy(x => x.upc).Select(y => y.FirstOrDefault()).ToList();
+                                                }
                                             }
                                         }
-                                        else
+                                        catch (Exception e)
                                         {
-                                            if (pmsk.Qty > 0 && pmsk.Price > 0)
-                                            {
-                                                fulllist.Add(full);
-                                                prodlist.Add(pmsk);
-                                                prodlist = prodlist.GroupBy(x => x.upc).Select(y => y.FirstOrDefault()).ToList();
-                                                fulllist = fulllist.GroupBy(x => x.upc).Select(y => y.FirstOrDefault()).ToList();
-                                            }
+                                            Console.WriteLine(e.Message);
                                         }
                                     }
-                                    catch (Exception e)
+                                }
+                                else
+                                {
+                                    foreach(DataRow dr in dt.Rows)
                                     {
-                                        Console.WriteLine(e.Message);
+                                        try
+                                        {
+                                            ProductsModel pmsk = new ProductsModel();
+                                            FullNameProductModel full = new FullNameProductModel();
+                                            pmsk.StoreID = StoreId;
+                                            Verify v = new Verify(dr, StoreId);
+                                            if (!string.IsNullOrEmpty(v.GetStringByIndex(1)))
+                                            {
+                                                pmsk.upc = "#" + v.GetStringByIndex(1);
+                                                pmsk.sku = "#" + v.GetStringByIndex(26);
+                                                full.upc = pmsk.upc;
+                                                full.sku = pmsk.sku;
+                                            }
+                                            else
+                                            {
+                                                continue;
+                                            }
+                                            pmsk.StoreProductName = v.GetStringByIndex(3);
+                                            pmsk.StoreDescription = pmsk.StoreProductName;
+                                            pmsk.uom = v.GetStringByIndex(4);
+                                            pmsk.Cost = v.GetDecimalByIndex(6);
+                                            pmsk.Price = v.GetDecimalByIndex(8);
+                                            pmsk.pack = v.getpack(pmsk.uom);
+                                            if (pmsk.pack == 1)
+                                                pmsk.pack = v.getpack(pmsk.StoreProductName);
+                                            if (StaticQty.Contains(StoreId.ToString()))
+                                                pmsk.Qty = 999;
+                                            else
+                                                pmsk.Qty = v.GetIntByIndex(18);
+                                            
+
+
+                                            full.pname = pmsk.StoreProductName;
+                                            full.pdesc = pmsk.StoreProductName;
+                                            full.uom = pmsk.uom;
+                                            full.Price = pmsk.Price;
+                                            full.pack = pmsk.pack;
+                                            full.pcat = v.GetStringByIndex(15);
+                                            full.pcat1 = v.GetStringByIndex(14);
+                                            if (full.pcat.ToUpper().Contains("BEER"))
+                                                pmsk.Tax = beertax;
+                                            else if (full.pcat.ToUpper().Contains("WINE") || full.pcat.ToUpper().Contains("LIQUOR"))
+                                                pmsk.Tax = winetax;
+                                            else
+                                                pmsk.Tax = Tax;
+                                            if (Quantity.Contains(StoreId.ToString()))
+                                            {
+                                                if (pmsk.Price > 0 && pmsk.Qty > 0)
+                                                {
+                                                    fulllist.Add(full);
+                                                    prodlist.Add(pmsk);
+                                                }
+                                            }
+                                            else if (pmsk.Price > 0)
+                                            {
+                                                fulllist.Add(full);
+                                                prodlist.Add(pmsk);
+                                            }
+                                        }
+                                        catch (Exception)
+                                        {
+
+                                        }
                                     }
                                 }
                                 Console.WriteLine("Generating BOTTLEPOS " + StoreId + " Product CSV Files.....");
