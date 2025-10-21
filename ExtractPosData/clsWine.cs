@@ -207,7 +207,7 @@ namespace ExtractPosData
                                     pmsk.altupc4 = "";
                                     pmsk.altupc5 = "";
 
-                                    // CRV calculation for store 12431  added on 21-10-25
+                                    // CRV calculation for store 12431  added on 21-10-2025
                                     if (StoreId == 12431)
                                     {
                                         if (!full.pcat.ToUpper().Equals("FOOD"))
